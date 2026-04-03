@@ -2,13 +2,16 @@ name: Update 2026 Batting Stats to Supabase
 
 on:
   schedule:
-    - cron: '0 12 * * *'     # Runs every day at 8:00 AM New York time
-  workflow_dispatch:         # Lets you run it manually anytime
+    - cron: '0 12 * * *'     # Every day at 8:00 AM New York time
+  workflow_dispatch:
 
 jobs:
   update-stats:
     runs-on: ubuntu-latest
     
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # Fixes the Node.js warning
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
