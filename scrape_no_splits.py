@@ -40,7 +40,11 @@ if not table:
 
 df = pd.read_html(StringIO(str(table)))[0]
 
-# DEBUG: Print columns so we can see exactly what Fangraphs returned
+# FIX: Flatten MultiIndex caused by the top pager row
+if isinstance(df.columns, pd.MultiIndex):
+    df.columns = df.columns.get_level_values(1)
+
+# DEBUG: Print columns (you can remove this later)
 print("DEBUG COLUMNS:", df.columns.tolist())
 
 df = df[['Name', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
