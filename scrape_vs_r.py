@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 from supabase import create_client, Client
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -17,7 +18,16 @@ SPLIT_NAME = "vs R"
 
 logging.info(f"📥 Scraping {SPLIT_NAME}...")
 
-resp = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.fangraphs.com/",
+    "DNT": "1",
+    "Connection": "keep-alive",
+}
+
+resp = requests.get(URL, headers=headers, timeout=20)
 resp.raise_for_status()
 df = pd.read_html(resp.text)[0]
 
@@ -44,3 +54,4 @@ supabase.table("fangraphs_advanced_batting").upsert(
 ).execute()
 
 logging.info(f"✅ {len(df):,} rows upserted for {SPLIT_NAME}")
+time.sleep(3)
