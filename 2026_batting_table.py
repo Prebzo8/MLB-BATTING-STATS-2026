@@ -3,7 +3,7 @@ import pandas as pd
 from supabase import create_client, Client
 import os
 
-print("Starting 2026 batting stats update...")
+print("Starting 2026 batting stats (No Splits) update...")
 
 # Connect to Supabase
 try:
@@ -52,9 +52,9 @@ print(f"✅ Fetched and prepared {len(df)} players")
 
 # Clear old data and insert fresh data
 print("Clearing old data from Supabase...")
-supabase.table('batting_stats_2026').delete().neq('idfg', -1).execute()
+supabase.table('batting_stats_nosplits_2026').delete().neq('idfg', -1).execute()
 
 print("Inserting new data...")
-result = supabase.table('batting_stats_2026').insert(df.to_dict(orient='records')).execute()
+result = supabase.table('batting_stats_nosplits_2026').insert(df.to_dict(orient='records')).execute()
 
 print(f"🎉 Successfully loaded {len(df)} rows into Supabase!")
