@@ -43,6 +43,8 @@ df = pd.read_html(StringIO(str(table)))[0]
 if isinstance(df.columns, pd.MultiIndex):
     df.columns = df.columns.get_level_values(1)
 
+df = df.iloc[1:].reset_index(drop=True)
+
 print("DEBUG COLUMNS:", df.columns.tolist())
 
 df = df[['Name', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
