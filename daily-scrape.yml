@@ -1,0 +1,45 @@
+name: Daily Fangraphs Scrape → Supabase
+
+on:
+  schedule:
+    - cron: '0 13 * * *'     # 8:00 AM ET every day (UTC-5)
+  workflow_dispatch:         # Allows manual run
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run all 5 scrapers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python scrape_no_splits.py
+          python scrape_vs_r.py
+          python scrape_vs_l.py
+          python scrape_home.py
+          python scrape_away.py
+
+      - name: Telegram — success
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="✅ FanGraphs scrape complete! All 5 splits (No Splits, vs R, vs L, Home, Away) upserted to Supabase successfully."
+
+      - name: Telegram — failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="❌ FanGraphs scrape FAILED. Check the logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
