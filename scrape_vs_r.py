@@ -5,6 +5,7 @@ from datetime import datetime
 from supabase import create_client, Client
 import logging
 import time
+from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -29,7 +30,14 @@ headers = {
 
 resp = requests.get(URL, headers=headers, timeout=20)
 resp.raise_for_status()
-df = pd.read_html(resp.text)[0]
+
+soup = BeautifulSoup(resp.text, "lxml")
+table = soup.find("table", id=lambda x: x and "dg1" in x.lower())
+
+if not table:
+    raise ValueError(f"Could not find leaderboard table for {SPLIT_NAME}")
+
+df = pd.read_html(str(table))[0]
 
 df = df[['Player', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
          'ISO', 'BABIP', 'wRC', 'wRAA', 'wOBA', 'wRC+']].copy()
@@ -54,4 +62,4 @@ supabase.table("fangraphs_advanced_batting").upsert(
 ).execute()
 
 logging.info(f"✅ {len(df):,} rows upserted for {SPLIT_NAME}")
-time.sleep(3)
+time.sleep(4)
