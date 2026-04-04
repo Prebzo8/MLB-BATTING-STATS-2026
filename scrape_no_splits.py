@@ -15,7 +15,7 @@ supabase: Client = create_client(
     os.environ["SUPABASE_KEY"]
 )
 
-URL = "https://www.fangraphs.com/leaders-legacy.aspx?pos=np&stats=bat&lg=all&qual=5&type=c,6,34,35,36,23,37,38,39,40,53,41,52,51,50,54&season=2026&month=0&season1=2026&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2026-01-01&enddate=2026-12-31&v_cr=legacy&page=1_2000"
+URL = "https://www.fangraphs.com/leaders-legacy.aspx?pos=np&stats=bat&lg=all&qual=5&type=c,6,34,35,36,23,37,38,39,40,53,41,52,51,50,61&season=2026&month=0&season1=2026&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2026-01-01&enddate=2026-12-31&v_cr=legacy&page=1_2000"
 SPLIT_NAME = "No Splits"
 
 logging.info(f"📥 Scraping {SPLIT_NAME}...")
