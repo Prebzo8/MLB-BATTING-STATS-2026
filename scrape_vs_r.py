@@ -39,12 +39,13 @@ if not table:
     raise ValueError(f"Could not find leaderboard table for {SPLIT_NAME}")
 
 df = pd.read_html(StringIO(str(table)))[0]
+print("DEBUG COLUMNS:", df.columns.tolist())   # debug line
 
-df = df[['Player', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
+df = df[['Name', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
          'ISO', 'BABIP', 'wRC', 'wRAA', 'wOBA', 'wRC+']].copy()
 
 df.rename(columns={
-    'Player': 'player', 'Team': 'team', 'PA': 'pa',
+    'Name': 'player', 'Team': 'team', 'PA': 'pa',
     'BB%': 'bb_pct', 'K%': 'k_pct', 'BB/K': 'bb_k',
     'AVG': 'avg', 'OBP': 'obp', 'SLG': 'slg', 'OPS': 'ops',
     'ISO': 'iso', 'BABIP': 'babip',
