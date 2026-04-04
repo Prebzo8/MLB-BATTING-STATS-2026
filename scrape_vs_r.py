@@ -6,6 +6,7 @@ from supabase import create_client, Client
 import logging
 import time
 from bs4 import BeautifulSoup
+from io import StringIO
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -32,12 +33,12 @@ resp = requests.get(URL, headers=headers, timeout=20)
 resp.raise_for_status()
 
 soup = BeautifulSoup(resp.text, "lxml")
-table = soup.find("table", id=lambda x: x and "dg1" in x.lower())
+table = soup.find("table", class_="rgMasterTable") or soup.find("table", id=lambda x: x and "dg1" in x.lower())
 
 if not table:
     raise ValueError(f"Could not find leaderboard table for {SPLIT_NAME}")
 
-df = pd.read_html(str(table))[0]
+df = pd.read_html(StringIO(str(table)))[0]
 
 df = df[['Player', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
          'ISO', 'BABIP', 'wRC', 'wRAA', 'wOBA', 'wRC+']].copy()
