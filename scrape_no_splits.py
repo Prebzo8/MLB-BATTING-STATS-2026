@@ -40,11 +40,14 @@ if not table:
 
 df = pd.read_html(StringIO(str(table)))[0]
 
-df = df[['Player', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
+# DEBUG: Print columns so we can see exactly what Fangraphs returned
+print("DEBUG COLUMNS:", df.columns.tolist())
+
+df = df[['Name', 'Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'OBP', 'SLG', 'OPS',
          'ISO', 'BABIP', 'wRC', 'wRAA', 'wOBA', 'wRC+']].copy()
 
 df.rename(columns={
-    'Player': 'player', 'Team': 'team', 'PA': 'pa',
+    'Name': 'player', 'Team': 'team', 'PA': 'pa',
     'BB%': 'bb_pct', 'K%': 'k_pct', 'BB/K': 'bb_k',
     'AVG': 'avg', 'OBP': 'obp', 'SLG': 'slg', 'OPS': 'ops',
     'ISO': 'iso', 'BABIP': 'babip',
