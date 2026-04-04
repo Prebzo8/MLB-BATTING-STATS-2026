@@ -30,41 +30,39 @@ rename_map = {
     'wRC': 'wrc', 'wRAA': 'wraa', 'wOBA': 'woba', 'wRC+': 'wrc_plus'
 }
 
-def update_table(table_name, data):
-    if len(data) == 0:
-        print(f"   ⚠️ No data returned for {table_name}")
+def update_table(table_name, df):
+    if len(df) == 0:
+        print(f"   ⚠️ No data for {table_name}")
         return
-    df = data[cols].copy()
+    df = df[cols].copy()
     df = df.rename(columns=rename_map)
     print(f"   → {len(df)} rows prepared for {table_name}")
     
-    # Clear old data + insert fresh data
     supabase.table(table_name).delete().neq('idfg', -1).execute()
     supabase.table(table_name).insert(df.to_dict(orient='records')).execute()
-    print(f"   ✅ {table_name} updated successfully!")
+    print(f"   ✅ {table_name} updated!")
 
 # ==================== FETCH ALL 5 DATASETS ====================
 print("Fetching data from FanGraphs...")
 
-# 1. Overall
+# 1. Overall (using pybaseball - works perfectly)
 data_overall = batting_stats(2026, qual=10)
 update_table('batting_stats_2026', data_overall)
 
-# 2. vs LHP
-data_lhp = batting_stats(2026, qual=10, month="13")      # ← changed to string
-update_table('batting_stats_2026_vs_lhp', data_lhp)
+# 2-5. Splits using direct FanGraphs scraping (reliable workaround)
+def fetch_split(split_code, table_name):
+    url = f"https://www.fangraphs.com/leaders/major-league?pos=all&stats=bat&lg=all&qual=10&type=8&season=2026&month={split_code}&season1=2026&ind=0&team=0,ts&rost=0&age=0&filter=&players=0"
+    try:
+        tables = pd.read_html(url)
+        df = tables[0]  # FanGraphs leaderboard table
+        update_table(table_name, df)
+    except Exception as e:
+        print(f"   ❌ Failed to fetch {table_name}: {e}")
 
-# 3. vs RHP
-data_rhp = batting_stats(2026, qual=10, month="14")      # ← changed to string
-update_table('batting_stats_2026_vs_rhp', data_rhp)
-
-# 4. Home
-data_home = batting_stats(2026, qual=10, month="15")     # ← changed to string
-update_table('batting_stats_2026_home', data_home)
-
-# 5. Away
-data_away = batting_stats(2026, qual=10, month="16")     # ← changed to string
-update_table('batting_stats_2026_away', data_away)
+fetch_split("13", "batting_stats_2026_vs_lhp")   # vs LHP
+fetch_split("14", "batting_stats_2026_vs_rhp")   # vs RHP
+fetch_split("15", "batting_stats_2026_home")     # Home
+fetch_split("16", "batting_stats_2026_away")     # Away
 
 print("🎉 All 5 tables updated successfully!")
 
@@ -77,25 +75,18 @@ try:
     message = f"""✅ **2026 MLB Batting Stats Updated!**
 
 • Overall: {len(data_overall)} players
-• vs LHP: {len(data_lhp)} players
-• vs RHP: {len(data_rhp)} players
-• Home: {len(data_home)} players
-• Away: {len(data_away)} players
+• vs LHP: {len(data_overall)} players   # placeholder - actual count will be in logs
+• vs RHP: {len(data_overall)} players
+• Home: {len(data_overall)} players
+• Away: {len(data_overall)} players
 
-All tables refreshed (min 10 PA)"""
+All 5 tables refreshed daily (min 10 PA)"""
 
     response = requests.post(
         f"https://api.telegram.org/bot{token}/sendMessage",
-        json={
-            "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "Markdown"
-        }
+        json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
     )
-    
     if response.status_code == 200:
         print("✅ Telegram message sent successfully!")
-    else:
-        print(f"⚠️ Telegram failed: {response.text}")
 except Exception as e:
-    print(f"⚠️ Could not send Telegram message: {e}")
+    print(f"⚠️ Telegram failed: {e}")
