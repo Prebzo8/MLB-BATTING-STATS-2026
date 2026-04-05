@@ -1,0 +1,45 @@
+name: Daily Fangraphs Last 14 Days Scrape → Supabase
+
+on:
+  schedule:
+    - cron: '0 14 * * *'    # 9:00 AM ET every day (offset from last30 job)
+  workflow_dispatch:          # Allows manual run
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run all 5 Last-14-Days scrapers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python last14_no_splits.py
+          python last14_vs_r.py
+          python last14_vs_l.py
+          python last14_home.py
+          python last14_away.py
+
+      - name: Telegram — success
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="✅ FanGraphs Last 14 Days scrape complete! All 5 splits (No Splits, vs R, vs L, Home, Away) uploaded to the Database successfully."
+
+      - name: Telegram — failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="❌ FanGraphs Last 14 Days scrape FAILED. Check the logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
