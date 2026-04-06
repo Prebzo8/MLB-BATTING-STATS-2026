@@ -4,3 +4,4 @@ supabase
 lxml
 beautifulsoup4
 pytz
+playwright
