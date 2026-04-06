@@ -58,6 +58,7 @@ rank_col = df.columns[0]
 df = df[~df[rank_col].astype(str).str.contains('Page size|items in', na=False)].reset_index(drop=True)
 
 logging.info(f"Columns detected: {df.columns.tolist()}")
+logging.info(f"ALL teams before normalize: {sorted(df['Team'].dropna().astype(str).tolist())}")
 
 DESIRED = ['Team', 'PA', 'BB%', 'K%', 'BB/K', 'AVG', 'SB', 'OBP', 'SLG', 'OPS',
            'ISO', 'Spd', 'BABIP', 'wRC', 'wRAA', 'wOBA', 'wRC+']
