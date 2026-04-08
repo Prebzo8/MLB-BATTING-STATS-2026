@@ -16,18 +16,18 @@ supabase: Client = create_client(
     os.environ["SUPABASE_KEY"]
 )
 
-_tz    = pytz.timezone('America/New_York')
+_tz = pytz.timezone('America/New_York')
 _today = datetime.now(_tz)
-TODAY  = _today.strftime('%Y-%m-%d')
+TODAY = _today.strftime('%Y-%m-%d')
 
 # ── TEAM ABBR NORMALIZATION ────────────────────────────────────
 # rotogrinders uses slightly different abbrevs in some cases
 ABBR_MAP = {
     'WSH': 'WSN',
-    'KC':  'KCR',
-    'SD':  'SDP',
-    'SF':  'SFG',
-    'TB':  'TBR',
+    'KC': 'KCR',
+    'SD': 'SDP',
+    'SF': 'SFG',
+    'TB': 'TBR',
     'CWS': 'CHW',
 }
 
@@ -36,8 +36,8 @@ def normalize_abbr(abbr):
 
 def parse_player_info(info_text):
     """
-    Parse 'Nico Hoerner  (R) 2B $12.3K' -> (name='Nico Hoerner', hand='R', position='2B')
-    Parse 'Jameson Taillon  (R) SP $15.9K' -> (name='Jameson Taillon', hand='R', position='SP')
+    Parse 'Nico Hoerner (R) 2B $12.3K' -> (name='Nico Hoerner', hand='R', position='2B')
+    Parse 'Jameson Taillon (R) SP $15.9K' -> (name='Jameson Taillon', hand='R', position='SP')
     """
     if not info_text:
         return None, None, None
@@ -58,20 +58,16 @@ def parse_player_info(info_text):
 # ── SCRAPE ────────────────────────────────────────────────────
 def scrape_lineups():
     records = []
-
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
         )
-
         logging.info("📥 Loading rotogrinders.com/lineups/mlb ...")
         page.goto('https://rotogrinders.com/lineups/mlb', timeout=30000)
-
         # Wait for lineup cards to render
         page.wait_for_selector('.game-card', timeout=20000)
         time.sleep(2)  # let lazy content finish loading
-
         html = page.content()
         browser.close()
 
@@ -103,7 +99,7 @@ def scrape_lineups():
             body = lc.select_one('.lineup-card-body')
             body_classes = body.get('class', []) if body else []
             if 'unconfirmed' in body_classes:
-                status = 'Projected'   # "lineup not released" = projected
+                status = 'Projected'  # "lineup not released" = projected
             else:
                 status = 'Confirmed'
 
@@ -125,24 +121,24 @@ def scrape_lineups():
                 _, bat_hand, position = parse_player_info(info_text)
                 if full_name:
                     batting_order.append({
-                        'order':    i + 1,
-                        'name':     full_name,
+                        'order': i + 1,
+                        'name': full_name,
                         'position': position,
                         'bat_side': bat_hand,
                     })
 
             records.append({
-                'team':          team,
-                'side':          side,
-                'game_date':     TODAY,
-                'game_time':     game_time,
+                'team': team,
+                'side': side,
+                'game_date': TODAY,
+                'game_time': game_time,
                 'lineup_status': status,
-                'pitcher_name':  pitcher_name,
-                'pitcher_hand':  pitcher_hand,
+                'pitcher_name': pitcher_name,
+                'pitcher_hand': pitcher_hand,
                 'batting_order': json.dumps(batting_order),
-                'scrape_date':   _today.strftime('%Y-%m-%d %H:%M:%S %Z'),
+                'scrape_date': _today.strftime('%Y-%m-%d %H:%M:%S %Z'),
             })
-            logging.info(f"  {side} {team}: {len(batting_order)} batters, SP={pitcher_name}, status={status}")
+            logging.info(f" {side} {team}: {len(batting_order)} batters, SP={pitcher_name}, status={status}")
 
     return records
 
@@ -153,14 +149,21 @@ if not records:
     logging.error("No records scraped — aborting")
     raise SystemExit(1)
 
-logging.info(f"\n📊 Total records: {len(records)}")
+logging.info(f"\n📊 Total records scraped: {len(records)}")
 
-# Delete today's rows and re-insert fresh
+# === CLEAN + OVERWRITE LOGIC (ensures ONLY today's lineups remain) ===
+# 1. Delete everything older than today
+supabase.table("projected_lineups").delete().lt("game_date", TODAY).execute()
+logging.info(f"🗑️ Removed all data older than {TODAY}")
+
+# 2. Delete any existing rows for today (guaranteed clean overwrite)
 supabase.table("projected_lineups").delete().eq("game_date", TODAY).execute()
-logging.info(f"🗑️  Cleared old rows for {TODAY}")
+logging.info(f"🗑️ Cleared old rows for {TODAY}")
 
+# 3. Insert fresh data
 supabase.table("projected_lineups").upsert(
-    records, on_conflict="team,game_date"
+    records, 
+    on_conflict="team,game_date"
 ).execute()
 
-logging.info(f"✅ {len(records)} rows upserted to projected_lineups")
+logging.info(f"✅ {len(records)} rows upserted — table now contains ONLY today's games")
