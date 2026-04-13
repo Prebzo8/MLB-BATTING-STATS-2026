@@ -1,0 +1,47 @@
+name: Confirmed Lineups — MLB Stats API
+
+on:
+  schedule:
+    # Every 15 minutes from 11:00 AM ET to 8:45 PM ET
+    # GitHub Actions cron runs in UTC. MLB season = EDT (UTC-4)
+    - cron: '0,15,30,45 15 * * *'   # 11:00–11:45 AM ET
+    - cron: '0,15,30,45 16 * * *'   # 12:00–12:45 PM ET
+    - cron: '0,15,30,45 17 * * *'   #  1:00– 1:45 PM ET
+    - cron: '0,15,30,45 18 * * *'   #  2:00– 2:45 PM ET
+    - cron: '0,15,30,45 19 * * *'   #  3:00– 3:45 PM ET
+    - cron: '0,15,30,45 20 * * *'   #  4:00– 4:45 PM ET
+    - cron: '0,15,30,45 21 * * *'   #  5:00– 5:45 PM ET
+    - cron: '0,15,30,45 22 * * *'   #  6:00– 6:45 PM ET
+    - cron: '0,15,30,45 23 * * *'   #  7:00– 7:45 PM ET
+    - cron: '0,15,30,45 0  * * *'   #  8:00– 8:45 PM ET
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  check-lineups:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests supabase pytz
+
+      - name: Check & write confirmed lineups
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:     ${{ secrets.SUPABASE_KEY }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scrape_confirmed_lineups.py
+
+      - name: Telegram — failure alert
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="❌ Confirmed lineups check FAILED. Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
