@@ -1,0 +1,41 @@
+name: Scrape Projected Lineups — RotoGrinders
+
+on:
+  schedule:
+    # Runs at 9 AM, 12 PM, 3 PM, and 5 PM ET (UTC-4 during EDT)
+    - cron: '0 13 * * *'   #  9:00 AM ET
+    - cron: '0 16 * * *'   # 12:00 PM ET
+    - cron: '0 19 * * *'   #  3:00 PM ET
+    - cron: '0 21 * * *'   #  5:00 PM ET
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
+
+jobs:
+  scrape-projected:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright beautifulsoup4 lxml supabase pytz
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Scrape & write projected lineups
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scrape_projected_lineups.py
+
+      - name: Telegram — failure alert
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="Projected lineups scrape FAILED. Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
