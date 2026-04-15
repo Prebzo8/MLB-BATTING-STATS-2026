@@ -1,0 +1,37 @@
+name: Scrape Confirmed Lineups
+
+on:
+  schedule:
+    # Top of every hour, every day
+    - cron: '0 * * * *'
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install \
+            requests \
+            pytz \
+            supabase
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:      ${{ secrets.SUPABASE_KEY }}
+          TELEGRAM_TOKEN:    ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scrape_confirmed_lineups.py
