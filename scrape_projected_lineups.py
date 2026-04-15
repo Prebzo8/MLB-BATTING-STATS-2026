@@ -16,15 +16,13 @@ supabase: Client = create_client(
     os.environ["SUPABASE_KEY"]
 )
 
-_tz    = pytz.timezone('America/New_York')
-_today = datetime.now(_tz)
-TODAY  = _today.strftime('%Y-%m-%d')
+_tz = pytz.timezone('America/New_York')
 
 ROTOGRINDERS_URL = "https://rotogrinders.com/lineups/mlb"
 
 # ── ABBREVIATION MAP ──────────────────────────────────────────────────────────
 RG_ABBR_MAP = {
-    "WAS": "WSN",   # RotoGrinders uses WAS, standard is WSN
+    "WAS": "WSN",
     "WSH": "WSN",
     "CWS": "CHW",
     "KC":  "KCR",
@@ -73,50 +71,44 @@ def normalize_name(name):
 
 
 # ── PARSERS ───────────────────────────────────────────────────────────────────
-# DOM structure confirmed from rotogrinders_debug.html:
+# DOM structure (confirmed from rotogrinders_debug.html):
 #
-#   div.module.game-card                     ← one per matchup (15 total)
-#     div.module-header.game-card-header
+#   div.module.game-card                      ← one per matchup
+#     div.game-card-header
 #       div.game-card-weather
-#         span.small                         ← "6:35 PM ET"
+#         span.small                          ← "6:35 PM ET"
 #       div.game-card-teams
-#         div.team-nameplate  (×2)
-#           span.team-nameplate-title[data-abbr="ARI"]   ← TEAM ABBR
-#     div.module-body.game-card-body
+#         span.team-nameplate-title[data-abbr="ARI"]  (×2)
+#     div.game-card-body
 #       div.game-card-lineups
 #         div.lineup-card  (×2: [0]=away, [1]=home)
 #           div.lineup-card-header
-#             div.lineup-card-pitcher.break
-#               span.player-nameplate[data-position="SP"]
-#                 div.player-nameplate-info
-#                   a.player-nameplate-name              ← pitcher name
-#                   span.player-nameplate-stats
-#                     span.small                         ← "(R)" hand
+#             div.lineup-card-pitcher         ← has class "break" when projected
+#               a.player-nameplate-name       ← pitcher name
+#               span.player-nameplate-stats span.small  ← "(R)"
 #           div.lineup-card-body
 #             ul.lineup-card-players
 #               li.lineup-card-player  (×9)
-#                 span.player-nameplate[data-position="OF"]
-#                   div.player-nameplate-info
-#                     a.player-nameplate-name            ← batter name
-#                     span.player-nameplate-stats
-#                       span.small                       ← "(L)" bat side
+#                 span[data-position]         ← position
+#                 a.player-nameplate-name     ← batter name
+#                 span.player-nameplate-stats span.small  ← "(L)"
 
-def parse_game_card(gc):
+def parse_game_card(gc, today):
     """Parse one div.module.game-card into away + home records."""
 
-    # ── Team abbrs ────────────────────────────────────────────────────────────
+    # Team abbrs
     team_els = gc.select(".team-nameplate-title[data-abbr]")
     if len(team_els) < 2:
-        logging.warning("Could not find 2 team abbrs — skipping")
+        logging.warning("Could not find 2 team abbrs — skipping card")
         return []
     away_abbr = normalize_abbr(team_els[0].get("data-abbr", ""))
     home_abbr = normalize_abbr(team_els[1].get("data-abbr", ""))
 
-    # ── Game time ─────────────────────────────────────────────────────────────
+    # Game time
     time_el   = gc.select_one(".game-card-weather .small")
     game_time = time_el.get_text(strip=True) if time_el else ""
 
-    # ── Lineup cards ([0]=away, [1]=home) ─────────────────────────────────────
+    # Lineup cards: [0] = away, [1] = home
     lineup_cards = gc.select(".lineup-card")
     if len(lineup_cards) < 2:
         logging.warning(f"{away_abbr} @ {home_abbr} — fewer than 2 lineup-card elements, skipping")
@@ -124,29 +116,27 @@ def parse_game_card(gc):
     lc_away = lineup_cards[0]
     lc_home = lineup_cards[1]
 
-    # ── Lineup status ─────────────────────────────────────────────────────────
-    # RotoGrinders marks unconfirmed cards with class "break" on the pitcher div.
-    # When lineups are confirmed that class is removed.
+    # Lineup status — RotoGrinders adds "break" class to pitcher div when projected
+    # We always write "Projected" here; the confirmed scraper is the authoritative
+    # source for flipping a row to "Confirmed"
     def get_status(lc):
         pitcher_div = lc.select_one(".lineup-card-pitcher")
         if pitcher_div and "break" in pitcher_div.get("class", []):
             return "Projected"
-        return "Confirmed"
+        return "Projected"   # default to Projected — confirmed scraper owns Confirmed
 
     away_status = get_status(lc_away)
     home_status = get_status(lc_home)
-    # Use the same status for both sides of the game card
-    status = "Confirmed" if away_status == "Confirmed" and home_status == "Confirmed" else "Projected"
+    status = away_status  # both sides get same status
 
-    # ── Pitchers ──────────────────────────────────────────────────────────────
+    # Pitchers — each lineup-card shows that team's own starting pitcher
     def parse_pitcher(lc):
         pitcher_el = lc.select_one(".lineup-card-pitcher .player-nameplate-name")
         name = normalize_name(pitcher_el.get_text(strip=True)) if pitcher_el else None
         hand = None
-        stats_spans = lc.select(".lineup-card-pitcher .player-nameplate-stats span.small")
-        if stats_spans:
-            raw = stats_spans[0].get_text(strip=True)  # e.g. "(R)"
-            m = re.search(r'\(([RL])\)', raw)
+        spans = lc.select(".lineup-card-pitcher .player-nameplate-stats span.small")
+        if spans:
+            m = re.search(r'\(([RL])\)', spans[0].get_text(strip=True))
             if m:
                 hand = m.group(1)
         return name, hand
@@ -154,7 +144,7 @@ def parse_game_card(gc):
     away_pitcher_name, away_pitcher_hand = parse_pitcher(lc_away)
     home_pitcher_name, home_pitcher_hand = parse_pitcher(lc_home)
 
-    # ── Batting orders ────────────────────────────────────────────────────────
+    # Batting orders
     def parse_batting_order(lc):
         order = []
         for i, player_el in enumerate(lc.select(".lineup-card-player")):
@@ -162,18 +152,14 @@ def parse_game_card(gc):
             name    = normalize_name(name_el.get_text(strip=True)) if name_el else ""
             if not name:
                 continue
-
             nameplate = player_el.select_one("[data-position]")
             pos       = nameplate.get("data-position", "") if nameplate else ""
-
-            bat_side = ""
-            stats_spans = player_el.select(".player-nameplate-stats span.small")
-            if stats_spans:
-                raw = stats_spans[0].get_text(strip=True)  # e.g. "(L)"
-                m = re.search(r'\(([LRS])\)', raw)
+            bat_side  = ""
+            spans = player_el.select(".player-nameplate-stats span.small")
+            if spans:
+                m = re.search(r'\(([LRS])\)', spans[0].get_text(strip=True))
                 if m:
                     bat_side = m.group(1)
-
             order.append({
                 "order":    i + 1,
                 "name":     name,
@@ -190,35 +176,37 @@ def parse_game_card(gc):
         f"away={len(away_order)} home={len(home_order)}"
     )
 
+    scrape_ts = datetime.now(_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
+
     return [
         {
             "team":          away_abbr,
             "side":          "Away",
-            "game_date":     TODAY,
+            "game_date":     today,
             "game_time":     game_time,
             "lineup_status": status,
-            "pitcher_name":  home_pitcher_name,   # away faces home pitcher
-            "pitcher_hand":  home_pitcher_hand,
+            "pitcher_name":  away_pitcher_name,   # own starting pitcher
+            "pitcher_hand":  away_pitcher_hand,
             "batting_order": json.dumps(away_order),
-            "scrape_date":   _today.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "scrape_date":   scrape_ts,
         },
         {
             "team":          home_abbr,
             "side":          "Home",
-            "game_date":     TODAY,
+            "game_date":     today,
             "game_time":     game_time,
             "lineup_status": status,
-            "pitcher_name":  away_pitcher_name,   # home faces away pitcher
-            "pitcher_hand":  away_pitcher_hand,
+            "pitcher_name":  home_pitcher_name,   # own starting pitcher
+            "pitcher_hand":  home_pitcher_hand,
             "batting_order": json.dumps(home_order),
-            "scrape_date":   _today.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "scrape_date":   scrape_ts,
         },
     ]
 
 
 # ── SCRAPER ───────────────────────────────────────────────────────────────────
 
-def scrape_rotogrinders():
+def scrape_rotogrinders(today):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page    = browser.new_page(
@@ -240,7 +228,6 @@ def scrape_rotogrinders():
         html = page.content()
         browser.close()
 
-    # Save debug HTML artifact
     try:
         with open("rotogrinders_debug.html", "w", encoding="utf-8") as f:
             f.write(html)
@@ -255,7 +242,7 @@ def scrape_rotogrinders():
     results = []
     for gc in game_cards:
         try:
-            records = parse_game_card(gc)
+            records = parse_game_card(gc, today)
             results.extend(records)
         except Exception as e:
             logging.warning(f"Game card parse error: {e}", exc_info=True)
@@ -265,32 +252,24 @@ def scrape_rotogrinders():
 
 # ── SUPABASE ──────────────────────────────────────────────────────────────────
 
-def write_to_supabase(records):
+def write_to_supabase(records, today):
     if not records:
         logging.info("No records to write")
         return
 
     # Delete rows older than today
     supabase.table("projected_lineups") \
-        .delete() \
-        .lt("game_date", TODAY) \
-        .execute()
+        .delete().lt("game_date", today).execute()
     logging.info("Cleared rows older than today")
 
-    # Only delete Projected rows for today — leave Confirmed rows untouched
+    # Delete only Projected rows for today — leave Confirmed rows untouched
     supabase.table("projected_lineups") \
-        .delete() \
-        .eq("game_date", TODAY) \
-        .eq("lineup_status", "Projected") \
-        .execute()
-    logging.info(f"Cleared today's Projected rows ({TODAY})")
+        .delete().eq("game_date", today).eq("lineup_status", "Projected").execute()
+    logging.info(f"Cleared today's Projected rows ({today})")
 
     # Skip teams already confirmed
     confirmed_res = supabase.table("projected_lineups") \
-        .select("team") \
-        .eq("game_date", TODAY) \
-        .eq("lineup_status", "Confirmed") \
-        .execute()
+        .select("team").eq("game_date", today).eq("lineup_status", "Confirmed").execute()
     confirmed_teams = {row["team"] for row in (confirmed_res.data or [])}
 
     to_insert = [r for r in records if r["team"] not in confirmed_teams]
@@ -302,8 +281,8 @@ def write_to_supabase(records):
         logging.info("All teams already confirmed — nothing to upsert")
         return
 
-    # Deduplicate by (team, game_date) to avoid ON CONFLICT crash
-    seen   = {}
+    # Deduplicate by (team, game_date) — prevents ON CONFLICT crash
+    seen = {}
     for r in to_insert:
         seen[(r["team"], r["game_date"])] = r
     deduped = list(seen.values())
@@ -311,36 +290,37 @@ def write_to_supabase(records):
         logging.warning(f"Removed {len(to_insert) - len(deduped)} duplicate records")
 
     supabase.table("projected_lineups") \
-        .upsert(deduped, on_conflict="team,game_date") \
-        .execute()
+        .upsert(deduped, on_conflict="team,game_date").execute()
     logging.info(f"Upserted {len(deduped)} projected records")
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
 def main():
+    # Compute today inside main() so it's always the correct date at run time
     now_et = datetime.now(_tz)
+    today  = now_et.strftime('%Y-%m-%d')
     force  = "--force" in sys.argv
 
     if not force:
         window_start = now_et.replace(hour=11, minute=0, second=0, microsecond=0)
-        window_end   = now_et.replace(hour=20, minute=0, second=0, microsecond=0)
+        window_end   = now_et.replace(hour=21, minute=0, second=0, microsecond=0)
         if not (window_start <= now_et <= window_end):
             logging.info(
-                f"Outside window (11 AM–8 PM ET). "
+                f"Outside window (11 AM–9 PM ET). "
                 f"Now: {now_et.strftime('%I:%M %p %Z')} — exiting. "
                 f"Pass --force to override."
             )
             return
 
     logging.info(
-        f"Scraping RotoGrinders for {TODAY} "
+        f"Scraping RotoGrinders for {today} "
         f"(ET: {now_et.strftime('%I:%M %p %Z')})"
         + (" [FORCED]" if force else "")
     )
-    records = scrape_rotogrinders()
+    records = scrape_rotogrinders(today)
     logging.info(f"Parsed {len(records)} records")
-    write_to_supabase(records)
+    write_to_supabase(records, today)
     logging.info("Done")
 
 

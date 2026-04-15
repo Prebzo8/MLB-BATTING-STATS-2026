@@ -16,17 +16,11 @@ supabase: Client = create_client(
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-_tz    = pytz.timezone('America/New_York')
-_today = datetime.now(_tz)
-TODAY  = _today.strftime('%Y-%m-%d')
+_tz = pytz.timezone('America/New_York')
 
 MLB_API = "https://statsapi.mlb.com/api/v1"
 
 # ── NAME DISPLAY MAP ──────────────────────────────────────────────────────────
-# MLB Stats API returns names without accents and sometimes without Jr./Sr.
-# This map patches them to match fangraphs_player_splits exactly.
-# Add entries here whenever a "Not Found" shows up in Lineup Stats.
-
 DISPLAY_NAME_MAP = {
     "Ronald Acuna Jr.":       "Ronald Acuña Jr.",
     "Ronald Acuna":           "Ronald Acuña Jr.",
@@ -50,11 +44,6 @@ DISPLAY_NAME_MAP = {
 }
 
 def normalize_name(name):
-    """
-    Return canonical display name matching fangraphs_player_splits.
-    Looks up DISPLAY_NAME_MAP first, falls back to whitespace-collapsed raw name.
-    Never strips Jr./Sr. — the stats table needs them for matching.
-    """
     if not name:
         return name
     cleaned = ' '.join(name.strip().split())
@@ -114,10 +103,9 @@ def send_telegram(msg):
         logging.warning(f"Telegram send failed: {e}")
 
 
-# ── MLB API HELPERS ───────────────────────────────────────────────────────────
-def get_todays_games():
-    """Return list of game dicts for today from the MLB Stats API."""
-    url = f"{MLB_API}/schedule?sportId=1&date={TODAY}&hydrate=team"
+# ── MLB API ───────────────────────────────────────────────────────────────────
+def get_todays_games(today):
+    url = f"{MLB_API}/schedule?sportId=1&date={today}&hydrate=team"
     try:
         r = requests.get(url, timeout=15)
         r.raise_for_status()
@@ -137,13 +125,11 @@ def get_todays_games():
                 logging.warning(f"Unknown team: '{away_name}' or '{home_name}' — skipping")
                 continue
 
-            # Parse game time UTC → ET
             game_time_raw = g.get("gameDate", "")
             try:
                 gt_utc    = datetime.strptime(game_time_raw, "%Y-%m-%dT%H:%M:%SZ")
                 gt_utc    = pytz.utc.localize(gt_utc)
                 gt_et     = gt_utc.astimezone(_tz)
-                # %-I is Linux-only but GitHub Actions runs ubuntu-latest so this is fine
                 game_time = gt_et.strftime("%-I:%M %p ET")
             except Exception:
                 game_time = ""
@@ -157,14 +143,15 @@ def get_todays_games():
                 "gameTime": game_time,
             })
 
-    logging.info(f"Found {len(games)} games today ({TODAY})")
+    logging.info(f"Found {len(games)} games today ({today})")
     return games
 
 
 def get_lineup(game_pk):
     """
-    Fetch confirmed lineup from MLB Stats API /game/{pk}/lineups.
-    Returns structured dict or None if lineup not yet posted.
+    Fetch confirmed lineup from MLB Stats API.
+    Returns dict with away/home data, or None if neither side is posted yet.
+    Handles partial lineups — if only one side is confirmed, returns that side.
     """
     url = f"{MLB_API}/game/{game_pk}/lineups"
     try:
@@ -178,8 +165,9 @@ def get_lineup(game_pk):
     home_batters = data.get("homeBatters", [])
     away_batters = data.get("awayBatters", [])
 
-    if not home_batters or not away_batters:
-        return None  # lineup not posted yet
+    # If neither side has batters, lineup not posted at all
+    if not home_batters and not away_batters:
+        return None
 
     def parse_batters(batters):
         order = []
@@ -197,7 +185,6 @@ def get_lineup(game_pk):
         return order
 
     def parse_pitcher(pitcher_list):
-        """Returns (name, hand) tuple. Call once and unpack."""
         if not pitcher_list:
             return None, None
         p = pitcher_list[0]
@@ -206,13 +193,14 @@ def get_lineup(game_pk):
             p.get("pitchHand", {}).get("code", ""),
         )
 
-    # FIX: call parse_pitcher once per side and unpack — not twice
     away_pitcher_name, away_pitcher_hand = parse_pitcher(data.get("awayPitchers", []))
     home_pitcher_name, home_pitcher_hand = parse_pitcher(data.get("homePitchers", []))
 
     return {
         "away":            parse_batters(away_batters),
         "home":            parse_batters(home_batters),
+        "awayReady":       len(away_batters) > 0,
+        "homeReady":       len(home_batters) > 0,
         "awayPitcherName": away_pitcher_name,
         "awayPitcherHand": away_pitcher_hand,
         "homePitcherName": home_pitcher_name,
@@ -220,13 +208,12 @@ def get_lineup(game_pk):
     }
 
 
-def get_already_confirmed():
-    """Return set of team abbrs already Confirmed in Supabase today."""
+def get_already_confirmed(today):
     try:
         res = (
             supabase.table("projected_lineups")
             .select("team")
-            .eq("game_date", TODAY)
+            .eq("game_date", today)
             .eq("lineup_status", "Confirmed")
             .execute()
         )
@@ -236,20 +223,20 @@ def get_already_confirmed():
         return set()
 
 
-def upsert_lineup(team_abbr, side, game, lineup_data, status):
+def upsert_lineup(team_abbr, side, game, lineup_data, status, today, scrape_ts):
     """Write one team's confirmed lineup to Supabase, overwriting any existing row."""
     batting_side = "away" if side == "Away" else "home"
 
     record = {
         "team":          team_abbr,
         "side":          side,
-        "game_date":     TODAY,
+        "game_date":     today,
         "game_time":     game["gameTime"],
         "lineup_status": status,
-        "pitcher_name":  lineup_data[f"{batting_side}PitcherName"],
+        "pitcher_name":  lineup_data[f"{batting_side}PitcherName"],   # own pitcher
         "pitcher_hand":  lineup_data[f"{batting_side}PitcherHand"],
         "batting_order": json.dumps(lineup_data[batting_side]),
-        "scrape_date":   _today.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "scrape_date":   scrape_ts,
     }
 
     supabase.table("projected_lineups").upsert(
@@ -261,28 +248,43 @@ def upsert_lineup(team_abbr, side, game, lineup_data, status):
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
+    # Compute today inside main() so it's always the correct date at run time
+    now_et     = datetime.now(_tz)
+    today      = now_et.strftime('%Y-%m-%d')
+    scrape_ts  = now_et.strftime("%Y-%m-%d %H:%M:%S %Z")
+
     logging.info(
-        f"[confirmed-lineups] Hourly check for {TODAY} "
-        f"(ET: {datetime.now(_tz).strftime('%I:%M %p %Z')})"
+        f"[confirmed-lineups] Hourly check for {today} "
+        f"(ET: {now_et.strftime('%I:%M %p %Z')})"
     )
 
-    # 1. Delete rows older than today (keep Supabase clean)
-    supabase.table("projected_lineups").delete().lt("game_date", TODAY).execute()
+    # 1. Always delete rows older than today — keep Supabase clean
+    supabase.table("projected_lineups").delete().lt("game_date", today).execute()
     logging.info("Cleared rows older than today")
 
-    # 2. Get today's schedule
-    games = get_todays_games()
+    # 2. Only check lineups between 11 AM and 9 PM ET
+    window_start = now_et.replace(hour=11, minute=0, second=0, microsecond=0)
+    window_end   = now_et.replace(hour=21, minute=0, second=0, microsecond=0)
+    if not (window_start <= now_et <= window_end):
+        logging.info(
+            f"Outside confirmation window (11 AM–9 PM ET). "
+            f"Now: {now_et.strftime('%I:%M %p %Z')} — skipping lineup checks."
+        )
+        return
+
+    # 3. Get today's schedule
+    games = get_todays_games(today)
     if not games:
         logging.info("No games today — exiting")
         return
 
-    # 3. Track which teams are already confirmed so we don't re-send Telegram
-    already_confirmed = get_already_confirmed()
+    # 4. Track already-confirmed teams so we don't re-send Telegram
+    already_confirmed = get_already_confirmed(today)
     logging.info(f"Already confirmed: {already_confirmed or 'none'}")
 
     newly_confirmed = []
 
-    # 4. Check each game for a confirmed lineup
+    # 5. Check each game for confirmed lineups
     for game in games:
         pk        = game["gamePk"]
         away_abbr = game["awayAbbr"]
@@ -292,18 +294,26 @@ def main():
 
         lineup = get_lineup(pk)
 
-        if lineup:
-            for abbr, side, full_name in [
-                (away_abbr, "Away", game["awayName"]),
-                (home_abbr, "Home", game["homeName"]),
-            ]:
-                upsert_lineup(abbr, side, game, lineup, "Confirmed")
-                if abbr not in already_confirmed:
-                    newly_confirmed.append((abbr, full_name, side, game["gameTime"]))
-        else:
-            logging.info(f"  {away_abbr} / {home_abbr} — not yet confirmed, projected rows untouched")
+        if not lineup:
+            logging.info(f"  {away_abbr} / {home_abbr} — not yet posted")
+            continue
 
-    # 5. Send Telegram for each newly confirmed team
+        # Confirm whichever side(s) are ready — handles partial/doubleheader lineups
+        for abbr, side, full_name, ready_key in [
+            (away_abbr, "Away", game["awayName"], "awayReady"),
+            (home_abbr, "Home", game["homeName"], "homeReady"),
+        ]:
+            if not lineup[ready_key]:
+                logging.info(f"  {abbr} ({side}) — not yet posted, skipping")
+                continue
+            if abbr in already_confirmed:
+                logging.info(f"  {abbr} ({side}) — already confirmed, skipping")
+                continue
+
+            upsert_lineup(abbr, side, game, lineup, "Confirmed", today, scrape_ts)
+            newly_confirmed.append((abbr, full_name, side, game["gameTime"]))
+
+    # 6. Send Telegram for each newly confirmed team
     for abbr, full_name, side, game_time in newly_confirmed:
         msg = (
             f"✅ Lineup CONFIRMED\n"
