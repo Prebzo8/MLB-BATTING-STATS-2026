@@ -1,0 +1,56 @@
+name: Scrape Projected Lineups
+
+on:
+  schedule:
+    # Every 30 min, 15:00–00:30 UTC (covers 11 AM–8 PM ET year-round for EDT+EST)
+    - cron: '0,30 15-23 * * *'
+    - cron: '0,30 0 * * *'
+  workflow_dispatch:  # manual trigger from GitHub Actions UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install \
+            playwright \
+            beautifulsoup4 \
+            lxml \
+            pytz \
+            supabase
+
+      - name: Install Playwright Chromium
+        run: playwright install chromium --with-deps
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        # Pass --force when triggered manually so the time window is bypassed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python scrape_projected_lineups.py --force
+          else
+            python scrape_projected_lineups.py
+          fi
+
+      # Download this from Actions → run → Artifacts if nothing appears in Supabase
+      - name: Upload debug HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rotogrinders-debug-html
+          path: rotogrinders_debug.html
+          retention-days: 2
