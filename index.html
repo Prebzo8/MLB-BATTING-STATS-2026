@@ -1473,7 +1473,7 @@ let _tickerBuilt = false;
 let _tickerRAF = null;
 let _tickerX = 0;
 let _tickerPaused = false;
-let _tickerSpeed = 60; // px/s — JS-driven so it never resets
+let _tickerSpeed = 25; // px/s — JS-driven so it never resets
 
 function updateSummaryBar(activeTab) {
     // Only build once. Filter/sort/tab changes must not restart the ticker.
