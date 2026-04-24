@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MLB 2026 • Mobile</title>
+<link rel="apple-touch-icon" sizes="180x180" href="/MLB-BATTING-STATS-2026/apple-touch-icon.png">
+<link rel="icon" type="image/x-icon" href="/MLB-BATTING-STATS-2026/favicon.ico">
+<link rel="manifest" href="/MLB-BATTING-STATS-2026/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MLB 2026">
+<meta name="theme-color" content="#080a0f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:       #080a0f;
+    --surface:  #0e1118;
+    --surface2: #141720;
+    --surface3: #1a1e2a;
+    --border:   #1e2333;
+    --border2:  #252a3a;
+    --accent:   #e63946;
+    --blue:     #60a5fa;
+    --orange:   #fb923c;
+    --text:     #e8eaf0;
+    --text2:    #9aa3b8;
+    --muted:    #5a6278;
+    --mono:     'DM Mono', monospace;
+    --display:  'Barlow Condensed', sans-serif;
+    --body:     'DM Sans', sans-serif;
+    --elite: #22c55e;
+    --good:  #84cc16;
+    --mid:   #facc15;
+    --bad:   #f97316;
+    --ass:   #ef4444;
+    --nav-h: 62px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--body);
+    display: flex; flex-direction: column;
+}
+body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+        radial-gradient(ellipse 80% 40% at 10% 0%, rgba(29,58,138,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 35% at 90% 100%, rgba(230,57,70,0.1) 0%, transparent 55%);
+}
+
+/* ── TOP HEADER ──────────────────────────────────────────────────────────── */
+.m-header {
+    position: relative; z-index: 100; flex-shrink: 0;
+    background: linear-gradient(135deg, #0c1830 0%, #0f1520 55%, #180810 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+    display: flex; align-items: center; justify-content: space-between;
+    height: calc(54px + env(safe-area-inset-top, 0px));
+    gap: 10px;
+}
+.m-brand { display: flex; align-items: center; gap: 9px; }
+.m-brand-icon {
+    width: 34px; height: 34px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; box-shadow: 0 0 18px rgba(230,57,70,0.4); flex-shrink: 0;
+}
+.m-brand-name { font-family: var(--display); font-size: 1.6rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; }
+.m-brand-sub  { font-family: var(--display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-top: 1px; }
+.m-status-btn {
+    font-family: var(--display); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--muted); cursor: pointer;
+    transition: all 0.18s; display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0;
+}
+.m-status-btn.loaded { border-color: rgba(34,197,94,0.4); color: var(--elite); background: rgba(34,197,94,0.06); }
+.m-status-btn.error  { border-color: rgba(239,68,68,0.4);  color: var(--ass);   background: rgba(239,68,68,0.06); }
+.m-status-btn.loading { border-color: rgba(96,165,250,0.4); color: var(--blue);  background: rgba(96,165,250,0.06); cursor: default; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+/* ── MAIN CONTENT AREA ──────────────────────────────────────────────────── */
+.m-main {
+    position: relative; z-index: 1; flex: 1; overflow: hidden;
+}
+.m-panel {
+    position: absolute; inset: 0;
+    overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 12px calc(var(--nav-h) + var(--safe-bottom) + 14px);
+    display: none;
+}
+.m-panel.active { display: block; }
+
+/* ── BOTTOM NAV ─────────────────────────────────────────────────────────── */
+.m-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(14,17,24,0.97);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    display: flex; align-items: stretch;
+    height: calc(var(--nav-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+}
+.m-nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; background: none; border: none; cursor: pointer;
+    color: var(--muted); transition: color 0.15s; padding: 6px 2px;
+    -webkit-tap-highlight-color: transparent;
+}
+.m-nav-btn.active { color: var(--accent); }
+.m-nav-btn.active .m-nav-icon { transform: scale(1.15); }
+.m-nav-icon { font-size: 1.25rem; line-height: 1; transition: transform 0.15s; }
+.m-nav-label { font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1; }
+
+/* ── SECTION HEADING ────────────────────────────────────────────────────── */
+.m-section-title {
+    font-family: var(--display); font-size: 1.4rem; font-weight: 900;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.m-section-title::before { content: ''; width: 3px; height: 20px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+
+/* ── FILTER ROW ─────────────────────────────────────────────────────────── */
+.m-filters {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end;
+    margin-bottom: 12px;
+}
+.m-filter-group { display: flex; flex-direction: column; gap: 3px; }
+.m-filter-label { font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+select, .m-text-input {
+    font-family: var(--body); font-size: 0.8rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+    color: var(--text); padding: 6px 10px; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236b7280' d='M5 7L1 2h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+    padding-right: 26px;
+}
+.m-text-input {
+    background-image: none; padding-right: 10px;
+}
+.m-text-input::placeholder { color: var(--muted); }
+select:focus, .m-text-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── EMPTY STATE ────────────────────────────────────────────────────────── */
+.m-empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.m-empty-icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.3; }
+.m-empty-text { font-family: var(--display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── TIER COLORS ─────────────────────────────────────────────────────────── */
+.t-elite { color: var(--elite); }
+.t-good  { color: var(--good);  }
+.t-mid   { color: var(--mid);   }
+.t-bad   { color: var(--bad);   }
+.t-ass   { color: var(--ass);   }
+
+/* ── RANKINGS TABLE (scrollable) ─────────────────────────────────────────── */
+.m-table-wrap {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow: auto; -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 220px);
+}
+.m-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.m-table thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.m-table th {
+    font-family: var(--display); font-size: 0.55rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    padding: 9px 10px; white-space: nowrap; text-align: right; background: var(--surface2);
+    cursor: pointer; user-select: none;
+}
+.m-table th.left-align { text-align: left; }
+.m-table th.sort-active { color: var(--accent); }
+.m-table td { padding: 7px 10px; border-bottom: 1px solid rgba(30,35,51,0.6); vertical-align: middle; }
+.m-table tbody tr:last-child td { border-bottom: none; }
+.m-table tbody tr:active { background: var(--surface2); }
+.m-table td.num { font-family: var(--mono); font-size: 0.78rem; text-align: right; color: var(--text2); }
+.m-table td.wrc { font-family: var(--mono); font-size: 0.88rem; font-weight: 600; text-align: right; }
+.rank-cell { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 34px; text-align: center; }
+.rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-family: var(--display); font-size: 0.8rem; font-weight: 800; }
+.rank-1 { background: #f59e0b; color: #000; box-shadow: 0 0 8px rgba(245,158,11,0.4); }
+.rank-2 { background: #94a3b8; color: #000; }
+.rank-3 { background: #a07850; color: #fff; }
+.m-team-cell { display: flex; align-items: center; gap: 7px; min-width: 70px; }
+.m-team-logo { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+.m-team-abbr { font-family: var(--display); font-size: 0.95rem; font-weight: 800; }
+@keyframes rowIn { from { opacity: 0; transform: translateX(4px); } to { opacity: 1; transform: translateX(0); } }
+.m-table tbody tr.anim { animation: rowIn 0.2s ease both; }
+
+/* ── HOT/COLD MOBILE ─────────────────────────────────────────────────────── */
+.hc-m-tabs {
+    display: flex; gap: 6px; margin-bottom: 12px;
+}
+.hc-m-tab {
+    flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    font-family: var(--display); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+    -webkit-tap-highlight-color: transparent;
+}
+.hc-m-tab.active-hot  { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #ef4444; }
+.hc-m-tab.active-cold { background: rgba(96,165,250,0.15); border-color: rgba(96,165,250,0.4); color: #60a5fa; }
+
+/* HC card list */
+.hc-m-panel { display: none; }
+.hc-m-panel.visible { display: block; }
+
+.hc-m-card {
+    display: flex; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 6px; gap: 10px;
+    transition: background 0.1s;
+}
+.hc-m-card:active { background: var(--surface2); }
+.hc-m-rank { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 18px; text-align: center; flex-shrink: 0; }
+.hc-m-logo { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; }
+.hc-m-name { flex: 1; min-width: 0; }
+.hc-m-abbr { font-family: var(--display); font-size: 1rem; font-weight: 900; line-height: 1; }
+.hc-m-sub  { font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 1px; }
+.hc-m-trend-chip { font-family: var(--mono); font-size: 0.55rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+.hc-m-trend-chip.up   { background: rgba(34,197,94,0.12); color: var(--elite); }
+.hc-m-trend-chip.down { background: rgba(239,68,68,0.12); color: var(--ass); }
+.hc-m-trend-chip.flat { background: rgba(90,98,120,0.15); color: var(--muted); }
+.hc-m-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.hc-m-primary { font-family: var(--mono); font-size: 1.05rem; font-weight: 800; line-height: 1; }
+.hc-m-secondary { display: flex; gap: 8px; }
+.hc-m-sec-item { display: flex; flex-direction: column; align-items: flex-end; gap: 0px; }
+.hc-m-sec-val { font-family: var(--mono); font-size: 0.7rem; font-weight: 700; line-height: 1; color: var(--text2); }
+.hc-m-sec-lbl { font-family: var(--display); font-size: 0.44rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+/* HC section divider */
+.hc-m-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 0 8px; padding: 8px 12px;
+    border-radius: 8px;
+}
+.hc-m-divider-hot  { background: linear-gradient(90deg, rgba(239,68,68,0.12) 0%, transparent 100%); }
+.hc-m-divider-cold { background: linear-gradient(90deg, rgba(96,165,250,0.12) 0%, transparent 100%); }
+.hc-m-divider-icon { font-size: 1.2rem; }
+.hc-m-divider-title { font-family: var(--display); font-size: 1rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.hc-m-divider-hot  .hc-m-divider-title { color: #ef4444; }
+.hc-m-divider-cold .hc-m-divider-title { color: #60a5fa; }
+.hc-m-divider-sub { font-family: var(--display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-left: auto; }
+
+/* HC stat scroller on card tap */
+.hc-m-stat-scroll {
+    display: flex; overflow-x: auto; gap: 0; scrollbar-width: none;
+    border-top: 1px solid var(--border); margin-top: 6px;
+    padding-top: 7px;
+}
+.hc-m-stat-scroll::-webkit-scrollbar { display: none; }
+.hc-m-scroll-stat {
+    flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 0 9px; border-right: 1px solid rgba(30,35,51,0.5);
+    min-width: 48px;
+}
+.hc-m-scroll-stat:last-child { border-right: none; }
+.hc-m-scroll-lbl { font-family: var(--display); font-size: 0.48rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.hc-m-scroll-val { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; }
+.hc-m-scroll-szn { font-family: var(--mono); font-size: 0.55rem; color: var(--muted); }
+
+/* Expanded card */
+.hc-m-card.expanded { flex-wrap: wrap; }
+.hc-m-card .hc-m-expand-row { width: 100%; }
+
+/* ── LINEUP CARDS ─────────────────────────────────────────────────────────── */
+.m-game-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 12px;
+}
+.m-game-header {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+}
+.m-game-matchup { display: flex; align-items: center; gap: 10px; }
+.m-game-team { display: flex; align-items: center; gap: 6px; }
+.m-game-team img { width: 32px; height: 32px; object-fit: contain; }
+.m-game-abbr { font-family: var(--display); font-size: 1.1rem; font-weight: 900; letter-spacing: 0.04em; }
+.m-game-vs { font-family: var(--display); font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.m-game-time { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); }
+.m-lineup-body { display: grid; grid-template-columns: 1fr 1fr; }
+.m-lineup-side:first-child { border-right: 1px solid var(--border); }
+.m-lineup-side-hdr {
+    background: var(--surface3); border-bottom: 1px solid var(--border);
+    padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;
+}
+.m-lineup-side-team { display: flex; align-items: center; gap: 6px; }
+.m-lineup-side-team img { width: 22px; height: 22px; object-fit: contain; }
+.m-lineup-side-abbr { font-family: var(--display); font-size: 0.85rem; font-weight: 900; }
+.m-lineup-lbl { font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.m-status-confirmed { color: var(--elite); font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 3px; padding: 1px 5px; }
+.m-status-projected  { color: var(--mid); font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(250,204,21,0.1); border: 1px solid rgba(250,204,21,0.25); border-radius: 3px; padding: 1px 5px; }
+.m-pitcher-row { padding: 5px 10px; border-bottom: 1px solid var(--border); background: rgba(230,57,70,0.04); display: flex; align-items: center; gap: 5px; }
+.m-pitcher-lbl { font-family: var(--display); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); flex-shrink: 0; }
+.m-pitcher-name { font-family: var(--body); font-size: 0.75rem; color: var(--text); }
+.m-pitcher-hand { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
+.m-batter-row { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-bottom: 1px solid rgba(30,35,51,0.4); }
+.m-batter-row:last-child { border-bottom: none; }
+.m-batter-num { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); width: 12px; flex-shrink: 0; text-align: right; }
+.m-batter-name { font-family: var(--body); font-size: 0.73rem; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-batter-pos  { font-family: var(--display); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); width: 22px; flex-shrink: 0; }
+.bat-badge { font-family: var(--display); font-size: 0.52rem; font-weight: 800; width: 16px; height: 16px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bat-R { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+.bat-L { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+.bat-S { background: rgba(250,204,21,0.15); color: var(--mid); border: 1px solid rgba(250,204,21,0.3); }
+
+/* ── RPG CARDS ───────────────────────────────────────────────────────────── */
+.m-rpg-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+}
+.m-rpg-rank { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 18px; text-align: center; flex-shrink: 0; }
+.m-rpg-logo { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; }
+.m-rpg-name { flex: 1; min-width: 0; font-family: var(--body); font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-rpg-stats { display: flex; gap: 10px; flex-shrink: 0; }
+.m-rpg-stat { display: flex; flex-direction: column; align-items: flex-end; }
+.m-rpg-val { font-family: var(--mono); font-size: 0.88rem; font-weight: 700; line-height: 1; }
+.m-rpg-lbl { font-family: var(--display); font-size: 0.46rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+/* ── DATA BADGE ──────────────────────────────────────────────────────────── */
+.m-data-badge {
+    font-family: var(--mono); font-size: 0.62rem; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 3px 8px; align-self: flex-end; flex-shrink: 0;
+}
+
+/* ── DAILY REPORT ────────────────────────────────────────────────────────── */
+.m-report-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 12px;
+}
+.m-report-header {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+}
+.m-report-team { display: flex; align-items: center; gap: 7px; }
+.m-report-team img { width: 30px; height: 30px; object-fit: contain; }
+.m-report-abbr { font-family: var(--display); font-size: 1.1rem; font-weight: 900; }
+.m-report-vs { font-family: var(--display); font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.m-report-body { padding: 0; }
+.m-report-row { display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid rgba(30,35,51,0.5); gap: 8px; }
+.m-report-row:last-child { border-bottom: none; }
+.m-report-stat-name { font-family: var(--display); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); width: 52px; flex-shrink: 0; }
+.m-report-team-block { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.m-report-team-line { display: flex; align-items: center; justify-content: space-between; }
+.m-report-team-nm { font-family: var(--display); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.m-report-val { font-family: var(--mono); font-size: 0.85rem; font-weight: 700; }
+.m-report-rank { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
+.m-bar-track { height: 3px; background: var(--border); border-radius: 2px; margin-top: 1px; overflow: hidden; }
+.m-bar-fill  { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── PLAYER STATS IN LINEUP ──────────────────────────────────────────────── */
+.m-lstats-player {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-bottom: 1px solid rgba(30,35,51,0.5);
+}
+.m-lstats-player:last-child { border-bottom: none; }
+.m-lstats-name { font-family: var(--body); font-size: 0.78rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-lstats-vals { display: flex; gap: 10px; flex-shrink: 0; }
+.m-lstats-val  { font-family: var(--mono); font-size: 0.75rem; font-weight: 700; }
+
+/* ── SCROLL INDICATOR ──────────────────────────────────────────────────────── */
+.m-scroll-hint {
+    font-family: var(--display); font-size: 0.5rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); text-align: center;
+    padding: 4px; margin-bottom: 8px; opacity: 0.7;
+}
+
+/* ── TIER PILLS ──────────────────────────────────────────────────────────── */
+.tier-pill { display: inline-block; padding: 1px 6px; border-radius: 99px; font-family: var(--display); font-size: 0.55rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.tier-elite { background: rgba(34,197,94,0.13);  color: var(--elite); border: 1px solid rgba(34,197,94,0.3); }
+.tier-good  { background: rgba(132,204,22,0.13); color: var(--good);  border: 1px solid rgba(132,204,22,0.3); }
+.tier-mid   { background: rgba(250,204,21,0.13); color: var(--mid);   border: 1px solid rgba(250,204,21,0.3); }
+.tier-bad   { background: rgba(249,115,22,0.13); color: var(--bad);   border: 1px solid rgba(249,115,22,0.3); }
+.tier-ass   { background: rgba(239,68,68,0.13);  color: var(--ass);   border: 1px solid rgba(239,68,68,0.3); }
+</style>
+</head>
+<body>
+
+<!-- TOP HEADER -->
+<header class="m-header">
+    <div class="m-brand">
+        <div class="m-brand-icon">⚾</div>
+        <div>
+            <div class="m-brand-name">MLB 2026</div>
+            <div class="m-brand-sub">Offense Analyzer</div>
+        </div>
+    </div>
+    <button class="m-status-btn loading" id="m-sync-btn" onclick="fetchData()" title="Sync data">
+        <span id="m-sync-icon" class="spin">↻</span>
+        <span id="m-sync-label">Loading…</span>
+    </button>
+</header>
+
+<!-- MAIN PANELS -->
+<main class="m-main">
+
+    <!-- PANEL: RANKINGS -->
+    <div id="mp-rankings" class="m-panel active">
+        <div class="m-section-title">Team Rankings</div>
+        <div class="m-filters">
+            <div class="m-filter-group">
+                <div class="m-filter-label">Range</div>
+                <select id="r-range" onchange="loadRankings()">
+                    <option value="season">Season</option>
+                    <option value="last_30">L30</option>
+                    <option value="last_14">L14</option>
+                    <option value="last_7">L7</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Split</div>
+                <select id="r-split" onchange="loadRankings()">
+                    <option value="no_split">Overall</option>
+                    <option value="vs_lhp">vs LHP</option>
+                    <option value="vs_rhp">vs RHP</option>
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Team</div>
+                <input class="m-text-input" id="r-search" type="text" placeholder="LAD…" oninput="loadRankings()" style="width:70px;">
+            </div>
+            <div id="r-badge" class="m-data-badge" style="display:none;"></div>
+        </div>
+        <div class="m-scroll-hint">← scroll right for all stats →</div>
+        <div class="m-table-wrap">
+            <table class="m-table">
+                <thead>
+                    <tr>
+                        <th class="left-align" style="width:34px;" onclick="sortRankings('_rank')">#</th>
+                        <th class="left-align" style="min-width:80px;">Team</th>
+                        <th class="sort-active" id="r-th-wrcPlus" onclick="sortRankings('wrcPlus')">wRC+ ↓</th>
+                        <th id="r-th-ops"    onclick="sortRankings('ops')">OPS</th>
+                        <th id="r-th-avg"    onclick="sortRankings('avg')">AVG</th>
+                        <th id="r-th-woba"   onclick="sortRankings('woba')">wOBA</th>
+                        <th id="r-th-obp"    onclick="sortRankings('obp')">OBP</th>
+                        <th id="r-th-slg"    onclick="sortRankings('slg')">SLG</th>
+                        <th id="r-th-iso"    onclick="sortRankings('iso')">ISO</th>
+                        <th id="r-th-babip"  onclick="sortRankings('babip')">BABIP</th>
+                        <th id="r-th-kPct"   onclick="sortRankings('kPct')">K%</th>
+                        <th id="r-th-bbPct"  onclick="sortRankings('bbPct')">BB%</th>
+                        <th id="r-th-pa"     onclick="sortRankings('pa')">PA</th>
+                    </tr>
+                </thead>
+                <tbody id="r-body">
+                    <tr><td colspan="13"><div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PANEL: PLAYERS -->
+    <div id="mp-players" class="m-panel">
+        <div class="m-section-title">Player Rankings</div>
+        <div class="m-filters">
+            <div class="m-filter-group">
+                <div class="m-filter-label">Range</div>
+                <select id="p-range" onchange="loadPlayers()">
+                    <option value="season">Season</option>
+                    <option value="last_30">L30</option>
+                    <option value="last_14">L14</option>
+                    <option value="last_7">L7</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Split</div>
+                <select id="p-split" onchange="loadPlayers()">
+                    <option value="no_split">Overall</option>
+                    <option value="vs_lhp">vs LHP</option>
+                    <option value="vs_rhp">vs RHP</option>
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Min PA</div>
+                <select id="p-minpa" onchange="loadPlayers()">
+                    <option value="0">All</option>
+                    <option value="25">25+</option>
+                    <option value="50" selected>50+</option>
+                    <option value="100">100+</option>
+                    <option value="150">150+</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Search</div>
+                <input class="m-text-input" id="p-search" type="text" placeholder="Soto…" oninput="loadPlayers()" style="width:80px;">
+            </div>
+        </div>
+        <div class="m-scroll-hint">← scroll right for all stats →</div>
+        <div class="m-table-wrap">
+            <table class="m-table">
+                <thead>
+                    <tr>
+                        <th class="left-align" style="width:34px;">#</th>
+                        <th class="left-align" style="min-width:110px;">Player</th>
+                        <th style="min-width:46px;">Tm</th>
+                        <th class="sort-active" id="p-th-wrcPlus" onclick="sortPlayers('wrcPlus')">wRC+ ↓</th>
+                        <th id="p-th-ops"   onclick="sortPlayers('ops')">OPS</th>
+                        <th id="p-th-avg"   onclick="sortPlayers('avg')">AVG</th>
+                        <th id="p-th-woba"  onclick="sortPlayers('woba')">wOBA</th>
+                        <th id="p-th-obp"   onclick="sortPlayers('obp')">OBP</th>
+                        <th id="p-th-slg"   onclick="sortPlayers('slg')">SLG</th>
+                        <th id="p-th-iso"   onclick="sortPlayers('iso')">ISO</th>
+                        <th id="p-th-babip" onclick="sortPlayers('babip')">BABIP</th>
+                        <th id="p-th-kPct"  onclick="sortPlayers('kPct')">K%</th>
+                        <th id="p-th-bbPct" onclick="sortPlayers('bbPct')">BB%</th>
+                        <th id="p-th-pa"    onclick="sortPlayers('pa')">PA</th>
+                    </tr>
+                </thead>
+                <tbody id="p-body">
+                    <tr><td colspan="14"><div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PANEL: HOT/COLD -->
+    <div id="mp-hotcold" class="m-panel">
+        <div class="m-section-title">🔥❄️ Hot / Cold</div>
+
+        <!-- Sub-tabs: Teams / Players -->
+        <div class="hc-m-tabs">
+            <button class="hc-m-tab active-hot" id="hct-teams" onclick="hcSubTab('teams')">🏟 Teams</button>
+            <button class="hc-m-tab" id="hct-players" onclick="hcSubTab('players')">🧑 Players</button>
+        </div>
+
+        <!-- TEAMS SUB-PANEL -->
+        <div id="hc-teams-panel">
+            <div class="m-filters">
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Stat</div>
+                    <select id="hct-metric" onchange="hcTeamSortStat=null;renderHCTeams()">
+                        <option value="wrcPlus">wRC+</option>
+                        <option value="ops">OPS</option>
+                        <option value="avg">AVG</option>
+                        <option value="woba">wOBA</option>
+                        <option value="obp">OBP</option>
+                        <option value="slg">SLG</option>
+                        <option value="iso">ISO</option>
+                        <option value="babip">BABIP</option>
+                        <option value="kPct">K%</option>
+                        <option value="bbPct">BB%</option>
+                    </select>
+                </div>
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Window</div>
+                    <select id="hct-window" onchange="hcTeamSortStat=null;renderHCTeams()">
+                        <option value="last_7">L7</option>
+                        <option value="last_14">L14</option>
+                        <option value="last_30">L30</option>
+                    </select>
+                </div>
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Split</div>
+                    <select id="hct-split" onchange="hcTeamSortStat=null;renderHCTeams()">
+                        <option value="no_split">Overall</option>
+                        <option value="vs_lhp">vs LHP</option>
+                        <option value="vs_rhp">vs RHP</option>
+                        <option value="home">Home</option>
+                        <option value="away">Away</option>
+                    </select>
+                </div>
+            </div>
+            <div id="hc-teams-container">
+                <div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- PLAYERS SUB-PANEL -->
+        <div id="hc-players-panel" style="display:none;">
+            <div class="m-filters">
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Stat</div>
+                    <select id="hcp-metric" onchange="hcPlayerSortStat=null;renderHCPlayers()">
+                        <option value="wrcPlus">wRC+</option>
+                        <option value="ops">OPS</option>
+                        <option value="avg">AVG</option>
+                        <option value="woba">wOBA</option>
+                        <option value="obp">OBP</option>
+                        <option value="slg">SLG</option>
+                        <option value="iso">ISO</option>
+                        <option value="babip">BABIP</option>
+                        <option value="kPct">K%</option>
+                        <option value="bbPct">BB%</option>
+                    </select>
+                </div>
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Window</div>
+                    <select id="hcp-window" onchange="hcPlayerSortStat=null;renderHCPlayers()">
+                        <option value="last_7">L7</option>
+                        <option value="last_14">L14</option>
+                        <option value="last_30">L30</option>
+                    </select>
+                </div>
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Split</div>
+                    <select id="hcp-split" onchange="hcPlayerSortStat=null;renderHCPlayers()">
+                        <option value="no_split">Overall</option>
+                        <option value="vs_lhp">vs LHP</option>
+                        <option value="vs_rhp">vs RHP</option>
+                        <option value="home">Home</option>
+                        <option value="away">Away</option>
+                    </select>
+                </div>
+                <div class="m-filter-group">
+                    <div class="m-filter-label">Min PA</div>
+                    <select id="hcp-minpa" onchange="hcPlayerSortStat=null;renderHCPlayers()">
+                        <option value="10">10+</option>
+                        <option value="20" selected>20+</option>
+                        <option value="30">30+</option>
+                        <option value="50">50+</option>
+                    </select>
+                </div>
+            </div>
+            <div id="hc-players-container">
+                <div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL: LINEUPS -->
+    <div id="mp-lineups" class="m-panel">
+        <div class="m-section-title">Lineups</div>
+        <div class="m-filters" style="margin-bottom:10px;">
+            <div id="lu-date-badge" class="m-data-badge">Today's Games</div>
+            <span id="lu-status" style="font-family:var(--mono);font-size:0.6rem;color:var(--text2);align-self:center;">⟳ —</span>
+            <button onclick="refreshLineupsMobile()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-size:0.62rem;border-radius:6px;padding:4px 9px;cursor:pointer;">Refresh</button>
+        </div>
+        <div id="m-lineup-container">
+            <div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading lineups…</div></div>
+        </div>
+    </div>
+
+    <!-- PANEL: R/G -->
+    <div id="mp-rpg" class="m-panel">
+        <div class="m-section-title">Runs Per Game</div>
+        <div class="m-filters">
+            <div class="m-filter-group">
+                <div class="m-filter-label">Sort</div>
+                <select id="rpg-sort-sel" onchange="renderRPG()">
+                    <option value="szn_2026">2026 R/G</option>
+                    <option value="last_3">Last 3</option>
+                    <option value="last_1">Last 1</option>
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
+                    <option value="szn_2025">2025 R/G</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Search</div>
+                <input class="m-text-input" id="rpg-search" type="text" placeholder="LAD…" oninput="renderRPG()" style="width:70px;">
+            </div>
+        </div>
+        <div id="rpg-container">
+            <div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div>
+        </div>
+    </div>
+
+    <!-- PANEL: DAILY REPORT -->
+    <div id="mp-report" class="m-panel">
+        <div class="m-section-title">Daily Report</div>
+        <div class="m-filters" style="margin-bottom:12px;">
+            <div class="m-filter-group">
+                <div class="m-filter-label">Date</div>
+                <select id="m-game-dropdown" onchange="handleMobileGameSelect(this.value)" style="max-width:180px;">
+                    <option value="">Loading games…</option>
+                </select>
+            </div>
+            <div class="m-filter-group">
+                <div class="m-filter-label">Split</div>
+                <select id="m-report-split">
+                    <option value="no_split">Overall</option>
+                    <option value="vs_lhp">vs LHP</option>
+                    <option value="vs_rhp">vs RHP</option>
+                    <option value="home">Home</option>
+                    <option value="away">Away</option>
+                </select>
+            </div>
+            <button onclick="loadMobileReport()" style="font-family:var(--display);font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:6px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;cursor:pointer;align-self:flex-end;">📊 Load</button>
+        </div>
+        <div id="m-report-container">
+            <div class="m-empty"><div class="m-empty-icon">📰</div><div class="m-empty-text">Select date &amp; generate report</div></div>
+        </div>
+    </div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="m-nav">
+    <button class="m-nav-btn active" id="nav-rankings" onclick="switchPanel('rankings')">
+        <span class="m-nav-icon">📊</span>
+        <span class="m-nav-label">Teams</span>
+    </button>
+    <button class="m-nav-btn" id="nav-players" onclick="switchPanel('players')">
+        <span class="m-nav-icon">🧑</span>
+        <span class="m-nav-label">Players</span>
+    </button>
+    <button class="m-nav-btn" id="nav-hotcold" onclick="switchPanel('hotcold')">
+        <span class="m-nav-icon">🔥</span>
+        <span class="m-nav-label">Hot/Cold</span>
+    </button>
+    <button class="m-nav-btn" id="nav-lineups" onclick="switchPanel('lineups')">
+        <span class="m-nav-icon">📋</span>
+        <span class="m-nav-label">Lineups</span>
+    </button>
+    <button class="m-nav-btn" id="nav-rpg" onclick="switchPanel('rpg')">
+        <span class="m-nav-icon">🏃</span>
+        <span class="m-nav-label">R/G</span>
+    </button>
+    <button class="m-nav-btn" id="nav-report" onclick="switchPanel('report')">
+        <span class="m-nav-icon">📰</span>
+        <span class="m-nav-label">Report</span>
+    </button>
+</nav>
+
+<script>
+// ── SUPABASE CONFIG ─────────────────────────────────────────────────────────
+const SUPABASE_URL   = 'https://mfliuasrygxkembqmrkr.supabase.co';
+const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mbGl1YXNyeWd4a2VtYnFtcmtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTI2MzIsImV4cCI6MjA5MDgyODYzMn0.ecYwYajjAfKNl22ONtYp2i99U-ePEAZ6uHESPiiT8nw';
+const SUPABASE_TABLE        = 'fangraphs_splits';
+const SUPABASE_PLAYER_TABLE = 'fangraphs_player_splits';
+const SUPABASE_RPG_TABLE    = 'mlb_rpg';
+const SUPABASE_LINEUP_TABLE = 'projected_lineups';
+
+// ── CONSTANTS ───────────────────────────────────────────────────────────────
+const teamLogos = {
+    "ARI":"https://www.mlbstatic.com/team-logos/109.svg","ATH":"https://www.mlbstatic.com/team-logos/133.svg",
+    "ATL":"https://www.mlbstatic.com/team-logos/144.svg","BAL":"https://www.mlbstatic.com/team-logos/110.svg",
+    "BOS":"https://www.mlbstatic.com/team-logos/111.svg","CHC":"https://www.mlbstatic.com/team-logos/112.svg",
+    "CHW":"https://www.mlbstatic.com/team-logos/145.svg","CIN":"https://www.mlbstatic.com/team-logos/113.svg",
+    "CLE":"https://www.mlbstatic.com/team-logos/114.svg","COL":"https://www.mlbstatic.com/team-logos/115.svg",
+    "DET":"https://www.mlbstatic.com/team-logos/116.svg","HOU":"https://www.mlbstatic.com/team-logos/117.svg",
+    "KCR":"https://www.mlbstatic.com/team-logos/118.svg","LAA":"https://www.mlbstatic.com/team-logos/108.svg",
+    "LAD":"https://www.mlbstatic.com/team-logos/119.svg","MIA":"https://www.mlbstatic.com/team-logos/146.svg",
+    "MIL":"https://www.mlbstatic.com/team-logos/158.svg","MIN":"https://www.mlbstatic.com/team-logos/142.svg",
+    "NYM":"https://www.mlbstatic.com/team-logos/121.svg","NYY":"https://www.mlbstatic.com/team-logos/147.svg",
+    "PHI":"https://www.mlbstatic.com/team-logos/143.svg","PIT":"https://www.mlbstatic.com/team-logos/134.svg",
+    "SDP":"https://www.mlbstatic.com/team-logos/135.svg","SEA":"https://www.mlbstatic.com/team-logos/136.svg",
+    "SFG":"https://www.mlbstatic.com/team-logos/137.svg","STL":"https://www.mlbstatic.com/team-logos/138.svg",
+    "TBR":"https://www.mlbstatic.com/team-logos/139.svg","TEX":"https://www.mlbstatic.com/team-logos/140.svg",
+    "TOR":"https://www.mlbstatic.com/team-logos/141.svg","WSN":"https://www.mlbstatic.com/team-logos/120.svg",
+    "WAS":"https://www.mlbstatic.com/team-logos/120.svg",
+};
+const teamColorsPdf = {
+    "ARI":{"primary":"#A71930"},"ATH":{"primary":"#EFB21E"},"ATL":{"primary":"#CE1141"},
+    "BAL":{"primary":"#DF4601"},"BOS":{"primary":"#BD3039"},"CHC":{"primary":"#CC3433"},
+    "CHW":{"primary":"#C4CED4"},"CIN":{"primary":"#C6011F"},"CLE":{"primary":"#E50022"},
+    "COL":{"primary":"#C4CED4"},"DET":{"primary":"#FA4616"},"HOU":{"primary":"#EB6E1F"},
+    "KCR":{"primary":"#BD9B60"},"LAA":{"primary":"#BA0021"},"LAD":{"primary":"#005A9C"},
+    "MIA":{"primary":"#00A3E0"},"MIL":{"primary":"#FFC52F"},"MIN":{"primary":"#D31145"},
+    "NYM":{"primary":"#FF5910"},"NYY":{"primary":"#003087"},"PHI":{"primary":"#E81828"},
+    "PIT":{"primary":"#FDB827"},"SDP":{"primary":"#FFC425"},"SEA":{"primary":"#005C5C"},
+    "SFG":{"primary":"#FD5A1E"},"STL":{"primary":"#C41E3A"},"TBR":{"primary":"#8FBCE6"},
+    "TEX":{"primary":"#C0111F"},"TOR":{"primary":"#134A8E"},"WSN":{"primary":"#AB0003"},
+    "WAS":{"primary":"#AB0003"},
+};
+
+const statMeta = [
+    { key:'wrcPlus', label:'wRC+',  fmt:v=>Math.round(v),    higherBetter:true,  thresholds:[120,110,100,90] },
+    { key:'ops',     label:'OPS',   fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.780,0.750,0.720,0.690] },
+    { key:'woba',    label:'wOBA',  fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.340,0.320,0.310,0.295] },
+    { key:'avg',     label:'AVG',   fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.270,0.260,0.245,0.230] },
+    { key:'obp',     label:'OBP',   fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.340,0.325,0.310,0.295] },
+    { key:'slg',     label:'SLG',   fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.450,0.425,0.400,0.375] },
+    { key:'iso',     label:'ISO',   fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.180,0.165,0.150,0.135] },
+    { key:'babip',   label:'BABIP', fmt:v=>v.toFixed(3),     higherBetter:true,  thresholds:[0.310,0.300,0.290,0.280] },
+    { key:'bbPct',   label:'BB%',   fmt:v=>v.toFixed(1)+'%', higherBetter:true,  thresholds:[10.5,9.5,8.5,7.5] },
+    { key:'kPct',    label:'K%',    fmt:v=>v.toFixed(1)+'%', higherBetter:false, thresholds:[19.0,21.0,23.0,25.0] },
+];
+const HC_TEAM_META = {};
+statMeta.forEach(m => {
+    HC_TEAM_META[m.key] = { fmt: m.fmt, higherBetter: m.higherBetter };
+});
+const HC_FULL_STATS  = ['wrcPlus','ops','avg','woba','obp','slg','iso','babip','kPct','bbPct'];
+const HC_FULL_LABELS = ['wRC+','OPS','AVG','wOBA','OBP','SLG','ISO','BABIP','K%','BB%'];
+const HC_STAT_LABEL  = { wrcPlus:'wRC+', ops:'OPS', avg:'AVG', woba:'wOBA', obp:'OBP', slg:'SLG', iso:'ISO', babip:'BABIP', kPct:'K%', bbPct:'BB%' };
+const HC_DATE_LABELS = { season:'SZN', last_30:'L30', last_14:'L14', last_7:'L7' };
+
+const RPG_TEAM_ABBR = {
+    'LA Dodgers':'LAD','Houston':'HOU','Washington':'WSN','Milwaukee':'MIL',
+    'NY Yankees':'NYY','Atlanta':'ATL','Philadelphia':'PHI','NY Mets':'NYM',
+    'San Diego':'SDP','Seattle':'SEA','Boston':'BOS','Minnesota':'MIN',
+    'Cleveland':'CLE','Toronto':'TOR','Texas':'TEX','Arizona':'ARI',
+    'Chi Cubs':'CHC','Detroit':'DET','Baltimore':'BAL','Sacramento':'ATH',
+    'Miami':'MIA','LA Angels':'LAA','Tampa Bay':'TBR','Cincinnati':'CIN',
+    'SF Giants':'SFG','Kansas City':'KCR','St. Louis':'STL',
+    'Pittsburgh':'PIT','Colorado':'COL','Chi Sox':'CHW',
+};
+const MLB_NAME_TO_ABBR = {
+    'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL',
+    'Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW',
+    'Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL',
+    'Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KCR',
+    'Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA',
+    'Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM',
+    'New York Yankees':'NYY','Oakland Athletics':'ATH','Philadelphia Phillies':'PHI',
+    'Pittsburgh Pirates':'PIT','San Diego Padres':'SDP','San Francisco Giants':'SFG',
+    'Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TBR',
+    'Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSN',
+    'Athletics':'ATH',
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let allData = {}, playerData = {}, rpgData = [], lineupGames = [];
+let rpgLoaded = false, playerLoaded = false, lineupLoaded = false;
+let playerPromise = null, lineupPromise = null;
+let rSortKey = 'wrcPlus', rSortDir = 'desc';
+let pSortKey = 'wrcPlus', pSortDir = 'desc';
+let hcTeamSortStat = null;
+let hcPlayerSortStat = null;
+let lineupLastFetched = null;
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+function getTier(meta, value) {
+    const [t0,t1,t2,t3] = meta.thresholds;
+    if (meta.higherBetter) {
+        if (value>=t0) return 'elite'; if (value>=t1) return 'good';
+        if (value>=t2) return 'mid';   if (value>=t3) return 'bad'; return 'ass';
+    } else {
+        if (value<=t0) return 'elite'; if (value<=t1) return 'good';
+        if (value<=t2) return 'mid';   if (value<=t3) return 'bad'; return 'ass';
+    }
+}
+function tc(key, val) {
+    const m = statMeta.find(s => s.key === key);
+    return m ? 't-' + getTier(m, val) : '';
+}
+function fmtStat(key, val) {
+    const m = statMeta.find(s => s.key === key);
+    return m ? m.fmt(val) : val;
+}
+function teamColor(abbr) {
+    return (teamColorsPdf[abbr] || { primary: '#9aa3b8' }).primary;
+}
+function teamLogo(abbr) {
+    return teamLogos[abbr] || '';
+}
+function logoImg(abbr, size=26) {
+    return `<img src="${teamLogo(abbr)}" onerror="this.style.opacity='.1'" alt="${abbr}" style="width:${size}px;height:${size}px;object-fit:contain;">`;
+}
+function batBadge(side) {
+    if (!side) return '';
+    const s = side.trim().toUpperCase();
+    const cls = ['R','L','S'].includes(s) ? s : 'R';
+    return `<span class="bat-badge bat-${cls}">${cls}</span>`;
+}
+function correctPlayerName(name) { return name || ''; }
+function normalizeName(str) {
+    if (!str) return '';
+    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+        .replace(/\s*\b(jr\.?|sr\.?|ii|iii|iv)\b\s*/gi," ").replace(/[^a-z]/g,"").trim();
+}
+function rpgTier(val) {
+    if (val == null) return '';
+    if (val >= 5.5) return 't-elite';
+    if (val >= 4.8) return 't-good';
+    if (val >= 4.2) return 't-mid';
+    if (val >= 3.6) return 't-bad';
+    return 't-ass';
+}
+
+// ── PANEL SWITCHING ─────────────────────────────────────────────────────────
+function switchPanel(id) {
+    document.querySelectorAll('.m-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.m-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mp-' + id).classList.add('active');
+    document.getElementById('nav-' + id).classList.add('active');
+
+    if (id === 'players' && !playerLoaded) ensurePlayers().then(() => loadPlayers());
+    if (id === 'hotcold') renderHCTeams();
+    if (id === 'lineups') ensureLineups().then(() => renderLineupsMobile());
+    if (id === 'rpg') ensureRPG().then(() => renderRPG());
+    if (id === 'report') initMobileReport();
+}
+
+// ── DATA FETCH ──────────────────────────────────────────────────────────────
+async function sbFetch(table, extra='') {
+    let all = [], pg = 0, PAGE = 1000;
+    while (true) {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/${table}?select=*${extra}&limit=${PAGE}&offset=${pg * PAGE}`,
+            { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'count=none' } }
+        );
+        if (!res.ok) throw new Error(`${table} HTTP ${res.status}`);
+        const page = await res.json();
+        all = all.concat(page);
+        if (page.length < PAGE) break;
+        pg++;
+    }
+    return all;
+}
+
+async function fetchData() {
+    const btn = document.getElementById('m-sync-btn');
+    const ic  = document.getElementById('m-sync-icon');
+    const lb  = document.getElementById('m-sync-label');
+    btn.className = 'm-status-btn loading';
+    ic.textContent = '↻'; ic.className = 'spin';
+    lb.textContent = 'Loading…';
+    try {
+        const rows = await sbFetch(SUPABASE_TABLE);
+        if (!rows.length) throw new Error('0 rows');
+        loadTeamRows(rows);
+        const now = new Date();
+        const ts = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+        btn.className = 'm-status-btn loaded';
+        ic.textContent = ''; ic.className = '';
+        lb.textContent = `🟢 ${ts}`;
+    } catch(err) {
+        btn.className = 'm-status-btn error';
+        ic.textContent = '⚠'; ic.className = '';
+        lb.textContent = 'Error';
+        console.error(err);
+    }
+}
+
+function loadTeamRows(rows) {
+    allData = {};
+    const parsePct = v => parseFloat(String(v||'').replace('%','')) || 0;
+    const parseNum = v => parseFloat(v) || 0;
+
+    // Scrape date
+    const latest = rows.reduce((l,r) => (!l || (r.updated_at||'') > (l.updated_at||'')) ? r : l, null);
+    if (latest?.updated_at) {
+        const [yr,mo,dy] = latest.updated_at.slice(0,10).split('-');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        document.getElementById('r-badge').textContent = `${months[+mo-1]} ${+dy}, ${yr}`;
+        document.getElementById('r-badge').style.display = '';
+    }
+
+    for (const r of rows) {
+        const split = (r.split||'').trim(), dr = (r.date_range||'').trim(), tm = (r.tm||'').trim();
+        if (!split || !dr || !tm) continue;
+        const key = `${split}-${dr}`;
+        if (!allData[key]) allData[key] = [];
+        allData[key].push({
+            tm, split, dateRange: dr,
+            startDate: (r.start_date||'').trim(), endDate: (r.end_date||'').trim(),
+            pa: parseNum(r.pa), bbPct: parsePct(r.bb_pct), kPct: parsePct(r.k_pct),
+            avg: parseNum(r.avg), obp: parseNum(r.obp), slg: parseNum(r.slg),
+            ops: parseNum(r.ops), iso: parseNum(r.iso), babip: parseNum(r.babip),
+            woba: parseNum(r.woba), wrcPlus: parseNum(r.wrcplus),
+        });
+    }
+    loadRankings();
+    renderHCTeams();
+}
+
+function ensurePlayers() {
+    if (!playerPromise) {
+        playerPromise = sbFetch(SUPABASE_PLAYER_TABLE).then(rows => {
+            const parsePct = v => parseFloat(String(v||'').replace('%','')) || 0;
+            const parseNum = v => parseFloat(v) || 0;
+            playerData = {};
+            for (const r of rows) {
+                const split = (r.split||'').trim(), dr = (r.date_range||'').trim();
+                const name = correctPlayerName((r.name||'').trim());
+                if (!split || !dr || !name) continue;
+                const key = `${split}-${dr}`;
+                if (!playerData[key]) playerData[key] = [];
+                playerData[key].push({
+                    name, tm: (r.tm||'').trim(), split, dateRange: dr,
+                    startDate: (r.start_date||'').trim(), endDate: (r.end_date||'').trim(),
+                    pa: parseNum(r.pa), bbPct: parsePct(r.bb_pct), kPct: parsePct(r.k_pct),
+                    avg: parseNum(r.avg), obp: parseNum(r.obp), slg: parseNum(r.slg),
+                    ops: parseNum(r.ops), iso: parseNum(r.iso), babip: parseNum(r.babip),
+                    woba: parseNum(r.woba), wrcPlus: parseNum(r.wrcplus),
+                });
+            }
+            playerLoaded = true;
+        });
+    }
+    return playerPromise;
+}
+
+async function ensureRPG() {
+    if (rpgLoaded) return;
+    const rows = await fetch(
+        `${SUPABASE_URL}/rest/v1/${SUPABASE_RPG_TABLE}?select=*&order=szn_2026.desc`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' } }
+    ).then(r => r.json());
+    rpgData = rows.map(r => ({
+        tm: (r.team||'').trim(),
+        szn_2026: r.szn_2026 != null ? parseFloat(r.szn_2026) : null,
+        last_3:   r.last_3   != null ? parseFloat(r.last_3)   : null,
+        last_1:   r.last_1   != null ? parseFloat(r.last_1)   : null,
+        home:     r.home     != null ? parseFloat(r.home)     : null,
+        away:     r.away     != null ? parseFloat(r.away)     : null,
+        szn_2025: r.szn_2025 != null ? parseFloat(r.szn_2025) : null,
+    }));
+    rpgLoaded = true;
+}
+
+function ensureLineups() {
+    if (!lineupPromise) {
+        lineupPromise = fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_LINEUP_TABLE}?select=*&order=game_date.desc,game_time.asc`,
+            { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'count=none' } }
+        ).then(r => r.json()).then(rows => {
+            lineupGames = rows;
+            lineupLastFetched = new Date();
+            updateLUBadge();
+        });
+    }
+    return lineupPromise;
+}
+
+async function refreshLineupsMobile() {
+    lineupPromise = null;
+    updateLUBadge('refreshing');
+    try {
+        await ensureLineups();
+        renderLineupsMobile();
+    } catch(e) { updateLUBadge('error'); }
+}
+
+function updateLUBadge(state) {
+    const el = document.getElementById('lu-status');
+    if (!el) return;
+    if (state === 'refreshing') { el.textContent = '⟳ Refreshing…'; el.style.color = 'var(--text2)'; }
+    else if (state === 'error') { el.textContent = '⚠ Error'; el.style.color = 'var(--bad)'; }
+    else {
+        const ts = lineupLastFetched ? lineupLastFetched.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }) : '—';
+        el.textContent = `⟳ ${ts}`; el.style.color = 'var(--text2)';
+    }
+}
+
+// ── AUTO-REFRESH LINEUPS ─────────────────────────────────────────────────────
+setInterval(async () => {
+    if (!lineupLoaded) return;
+    try {
+        const prev = JSON.stringify(lineupGames);
+        lineupPromise = null;
+        await ensureLineups();
+        if (JSON.stringify(lineupGames) !== prev) renderLineupsMobile();
+    } catch(e) {}
+}, 2 * 60 * 1000);
+
+// ── RANKINGS ─────────────────────────────────────────────────────────────────
+function loadRankings() {
+    const dr = document.getElementById('r-range').value;
+    const st = document.getElementById('r-split').value;
+    const search = (document.getElementById('r-search').value || '').trim().toUpperCase();
+    let data = allData[`${st}-${dr}`] || [];
+    const badge = document.getElementById('r-badge');
+    if (data.length && badge.style.display === '') {
+        badge.textContent = `${data[0].startDate} → ${data[0].endDate}`;
+    }
+    if (search) data = data.filter(r => r.tm.includes(search));
+    const sorted = [...data].sort((a,b) => rSortDir==='desc' ? (b[rSortKey]??-999)-(a[rSortKey]??-999) : (a[rSortKey]??-999)-(b[rSortKey]??-999));
+    const tbody = document.getElementById('r-body');
+    if (!sorted.length) {
+        tbody.innerHTML = `<tr><td colspan="13"><div class="m-empty"><div class="m-empty-icon">🔍</div><div class="m-empty-text">${data.length?'No match':'No data'}</div></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = sorted.map((row, i) => {
+        const rank = i+1;
+        const rankHtml = rank<=3 ? `<span class="rank-badge rank-${rank}">${rank}</span>` : `<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">${rank}</span>`;
+        return `<tr class="anim" style="animation-delay:${Math.min(i*8,200)}ms">
+            <td class="rank-cell">${rankHtml}</td>
+            <td><div class="m-team-cell">${logoImg(row.tm,24)}<span style="color:${teamColor(row.tm)};font-family:var(--display);font-size:0.95rem;font-weight:900;">${row.tm==='WAS'?'WSN':row.tm}</span></div></td>
+            <td class="wrc ${tc('wrcPlus',row.wrcPlus)}">${row.wrcPlus}</td>
+            <td class="num ${tc('ops',row.ops)}">${row.ops.toFixed(3)}</td>
+            <td class="num ${tc('avg',row.avg)}">${row.avg.toFixed(3)}</td>
+            <td class="num ${tc('woba',row.woba)}">${row.woba.toFixed(3)}</td>
+            <td class="num ${tc('obp',row.obp)}">${row.obp.toFixed(3)}</td>
+            <td class="num ${tc('slg',row.slg)}">${row.slg.toFixed(3)}</td>
+            <td class="num ${tc('iso',row.iso)}">${row.iso.toFixed(3)}</td>
+            <td class="num ${tc('babip',row.babip)}">${row.babip.toFixed(3)}</td>
+            <td class="num ${tc('kPct',row.kPct)}">${row.kPct.toFixed(1)}%</td>
+            <td class="num ${tc('bbPct',row.bbPct)}">${row.bbPct.toFixed(1)}%</td>
+            <td class="num">${row.pa}</td>
+        </tr>`;
+    }).join('');
+}
+
+function sortRankings(key) {
+    if (key === '_rank') return;
+    if (rSortKey === key) rSortDir = rSortDir==='desc'?'asc':'desc';
+    else { rSortKey = key; rSortDir = 'desc'; }
+    document.querySelectorAll('[id^="r-th-"]').forEach(th => {
+        th.classList.remove('sort-active');
+        th.textContent = th.textContent.replace(/ [↓↑]$/,'');
+    });
+    const el = document.getElementById('r-th-'+key);
+    if (el) { el.classList.add('sort-active'); el.textContent += (rSortDir==='desc'?' ↓':' ↑'); }
+    loadRankings();
+}
+
+// ── PLAYERS ──────────────────────────────────────────────────────────────────
+function loadPlayers() {
+    const dr = document.getElementById('p-range').value;
+    const st = document.getElementById('p-split').value;
+    const minPa = parseInt(document.getElementById('p-minpa').value) || 0;
+    const search = (document.getElementById('p-search').value || '').trim().toLowerCase();
+    let data = playerData[`${st}-${dr}`] || [];
+    if (minPa > 0) data = data.filter(r => r.pa >= minPa);
+    if (search) data = data.filter(r => r.name.toLowerCase().includes(search) || r.tm.toLowerCase().includes(search));
+    const sorted = [...data].sort((a,b) => pSortDir==='desc' ? (b[pSortKey]??-999)-(a[pSortKey]??-999) : (a[pSortKey]??-999)-(b[pSortKey]??-999));
+    const tbody = document.getElementById('p-body');
+    if (!sorted.length) {
+        tbody.innerHTML = `<tr><td colspan="14"><div class="m-empty"><div class="m-empty-icon">🔍</div><div class="m-empty-text">${playerLoaded?'No data':'Loading…'}</div></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = sorted.map((row,i) => {
+        const rank = i+1;
+        const rankHtml = rank<=3 ? `<span class="rank-badge rank-${rank}">${rank}</span>` : `<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">${rank}</span>`;
+        return `<tr class="anim" style="animation-delay:${Math.min(i*8,200)}ms">
+            <td class="rank-cell">${rankHtml}</td>
+            <td style="white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:0.78rem;">${row.name}</td>
+            <td><div style="display:flex;align-items:center;gap:4px;">${logoImg(row.tm,18)}<span style="color:${teamColor(row.tm)};font-family:var(--display);font-size:0.78rem;font-weight:800;">${row.tm==='WAS'?'WSN':row.tm}</span></div></td>
+            <td class="wrc ${tc('wrcPlus',row.wrcPlus)}">${row.wrcPlus}</td>
+            <td class="num ${tc('ops',row.ops)}">${row.ops.toFixed(3)}</td>
+            <td class="num ${tc('avg',row.avg)}">${row.avg.toFixed(3)}</td>
+            <td class="num ${tc('woba',row.woba)}">${row.woba.toFixed(3)}</td>
+            <td class="num ${tc('obp',row.obp)}">${row.obp.toFixed(3)}</td>
+            <td class="num ${tc('slg',row.slg)}">${row.slg.toFixed(3)}</td>
+            <td class="num ${tc('iso',row.iso)}">${row.iso.toFixed(3)}</td>
+            <td class="num ${tc('babip',row.babip)}">${row.babip.toFixed(3)}</td>
+            <td class="num ${tc('kPct',row.kPct)}">${row.kPct.toFixed(1)}%</td>
+            <td class="num ${tc('bbPct',row.bbPct)}">${row.bbPct.toFixed(1)}%</td>
+            <td class="num">${row.pa}</td>
+        </tr>`;
+    }).join('');
+}
+
+function sortPlayers(key) {
+    if (pSortKey === key) pSortDir = pSortDir==='desc'?'asc':'desc';
+    else { pSortKey = key; pSortDir = 'desc'; }
+    document.querySelectorAll('[id^="p-th-"]').forEach(th => {
+        th.classList.remove('sort-active');
+        th.textContent = th.textContent.replace(/ [↓↑]$/,'');
+    });
+    const el = document.getElementById('p-th-'+key);
+    if (el) { el.classList.add('sort-active'); el.textContent += (pSortDir==='desc'?' ↓':' ↑'); }
+    loadPlayers();
+}
+
+// ── HOT / COLD ────────────────────────────────────────────────────────────────
+function hcSubTab(which) {
+    document.getElementById('hc-teams-panel').style.display  = which==='teams'   ? '' : 'none';
+    document.getElementById('hc-players-panel').style.display = which==='players' ? '' : 'none';
+    const tb = document.getElementById('hct-teams');
+    const pb = document.getElementById('hct-players');
+    if (which === 'teams') {
+        tb.className = 'hc-m-tab active-hot'; pb.className = 'hc-m-tab';
+        renderHCTeams();
+    } else {
+        pb.className = 'hc-m-tab active-cold'; tb.className = 'hc-m-tab';
+        ensurePlayers().then(() => renderHCPlayers());
+    }
+}
+
+function hcTier(key, val) {
+    const m = statMeta.find(s => s.key === key);
+    if (!m) return '';
+    return 't-' + getTier(m, val);
+}
+
+function renderHCTeams() {
+    const container = document.getElementById('hc-teams-container');
+    if (!container) return;
+    const metric  = document.getElementById('hct-metric').value;
+    const window_ = document.getElementById('hct-window').value;
+    const split   = document.getElementById('hct-split').value;
+    const rows    = allData[`${split}-${window_}`] || [];
+
+    if (!rows.length) {
+        container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">📭</div><div class="m-empty-text">No data</div></div>`;
+        return;
+    }
+
+    const activeStat = hcTeamSortStat || metric;
+    const sorted = [...rows].sort((a,b) => (b[activeStat]??-999) - (a[activeStat]??-999));
+    const hot  = sorted.slice(0, 10);
+    const cold = [...sorted].reverse().slice(0, 10);
+
+    const seasonRows = allData[`${split}-season`] || [];
+
+    function getTrend(tm) {
+        const curr = rows.find(r => r.tm === tm)?.[metric] ?? null;
+        const szn  = seasonRows.find(r => r.tm === tm)?.[metric] ?? null;
+        if (curr == null || szn == null || szn === 0) return null;
+        const diff = curr - szn;
+        const pct  = Math.abs(diff / szn) * 100;
+        if (pct < 5) return { dir:'flat', label:'~SZN' };
+        const m = HC_TEAM_META[metric];
+        const better = m?.higherBetter ? diff > 0 : diff < 0;
+        return { dir: better?'up':'down', label: (diff>0?'+':'') + HC_TEAM_META[metric].fmt(diff) };
+    }
+
+    function buildSection(list, isHot) {
+        const icon  = isHot ? '🔥' : '❄️';
+        const label = isHot ? 'Hottest Teams' : 'Coldest Teams';
+        const cls   = isHot ? 'hot' : 'cold';
+        let html = `<div class="hc-m-divider hc-m-divider-${cls}">
+            <span class="hc-m-divider-icon">${icon}</span>
+            <span class="hc-m-divider-title">${label}</span>
+            <span class="hc-m-divider-sub">Top 10 · ${HC_STAT_LABEL[metric]} · ${HC_DATE_LABELS[window_]}</span>
+        </div>`;
+        list.forEach((row, i) => {
+            const trend = getTrend(row.tm);
+            const trendHtml = trend ? `<span class="hc-m-trend-chip ${trend.dir}">${trend.label}</span>` : '';
+            const primaryVal = HC_TEAM_META[metric].fmt(row[metric] ?? 0);
+            const primaryTier = hcTier(metric, row[metric] ?? 0);
+            // Secondary stats (top 3 non-primary)
+            const secStats = HC_FULL_STATS.filter(k => k !== metric).slice(0, 3);
+            const secHtml = secStats.map(k => {
+                const v = row[k] ?? null;
+                const tier = v != null ? hcTier(k, v) : '';
+                return `<div class="hc-m-sec-item">
+                    <span class="hc-m-sec-val ${tier}">${v != null ? HC_TEAM_META[k].fmt(v) : '—'}</span>
+                    <span class="hc-m-sec-lbl">${HC_STAT_LABEL[k]}</span>
+                </div>`;
+            }).join('');
+
+            // Full stat scroll row (hidden until expand)
+            const allStatScroll = HC_FULL_STATS.map(k => {
+                const v = row[k] ?? null;
+                const tier = v != null ? hcTier(k, v) : '';
+                return `<div class="hc-m-scroll-stat">
+                    <span class="hc-m-scroll-lbl">${HC_STAT_LABEL[k]}</span>
+                    <span class="hc-m-scroll-val ${tier}">${v != null ? HC_TEAM_META[k].fmt(v) : '—'}</span>
+                    <span class="hc-m-scroll-szn">${(seasonRows.find(r=>r.tm===row.tm)?.[k] != null) ? HC_TEAM_META[k].fmt(seasonRows.find(r=>r.tm===row.tm)[k]) : ''}</span>
+                </div>`;
+            }).join('');
+
+            html += `<div class="hc-m-card" onclick="toggleHCCard(this)">
+                <span class="hc-m-rank">${i+1}</span>
+                ${logoImg(row.tm, 28)}
+                <div class="hc-m-name">
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span class="hc-m-abbr" style="color:${teamColor(row.tm)};">${row.tm==='WAS'?'WSN':row.tm}</span>
+                        ${trendHtml}
+                    </div>
+                    <div class="hc-m-sub">${HC_STAT_LABEL[metric]} · ${HC_DATE_LABELS[window_]}</div>
+                </div>
+                <div class="hc-m-stats">
+                    <span class="hc-m-primary ${primaryTier}">${primaryVal}</span>
+                    <div class="hc-m-secondary">${secHtml}</div>
+                </div>
+                <div class="hc-m-expand-row" style="display:none;">
+                    <div class="hc-m-stat-scroll">${allStatScroll}</div>
+                </div>
+            </div>`;
+        });
+        return html;
+    }
+
+    container.innerHTML = buildSection(hot, true) + buildSection(cold, false);
+}
+
+function renderHCPlayers() {
+    const container = document.getElementById('hc-players-container');
+    if (!container) return;
+    const metric  = document.getElementById('hcp-metric').value;
+    const window_ = document.getElementById('hcp-window').value;
+    const split   = document.getElementById('hcp-split').value;
+    const minPa   = parseInt(document.getElementById('hcp-minpa').value) || 0;
+    let rows = playerData[`${split}-${window_}`] || [];
+
+    if (!rows.length) {
+        container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">📭</div><div class="m-empty-text">No data</div></div>`;
+        return;
+    }
+    if (minPa > 0) rows = rows.filter(r => r.pa >= minPa);
+
+    const activeStat = hcPlayerSortStat || metric;
+    const sorted = [...rows].sort((a,b) => (b[activeStat]??-999) - (a[activeStat]??-999));
+    const hot  = sorted.slice(0, 10);
+    const cold = [...sorted].reverse().slice(0, 10);
+    const seasonRows = playerData[`${split}-season`] || [];
+
+    function buildSection(list, isHot) {
+        const icon  = isHot ? '🔥' : '❄️';
+        const label = isHot ? 'Hottest Players' : 'Coldest Players';
+        const cls   = isHot ? 'hot' : 'cold';
+        let html = `<div class="hc-m-divider hc-m-divider-${cls}">
+            <span class="hc-m-divider-icon">${icon}</span>
+            <span class="hc-m-divider-title">${label}</span>
+            <span class="hc-m-divider-sub">Top 10 · ${HC_STAT_LABEL[metric]} · ${HC_DATE_LABELS[window_]}</span>
+        </div>`;
+        list.forEach((row, i) => {
+            const sznRow = seasonRows.find(r => r.name === row.name && r.tm === row.tm);
+            const primaryVal = HC_TEAM_META[metric].fmt(row[metric] ?? 0);
+            const primaryTier = hcTier(metric, row[metric] ?? 0);
+            const secStats = HC_FULL_STATS.filter(k => k !== metric).slice(0, 3);
+            const secHtml = secStats.map(k => {
+                const v = row[k] ?? null;
+                const tier = v != null ? hcTier(k, v) : '';
+                return `<div class="hc-m-sec-item">
+                    <span class="hc-m-sec-val ${tier}">${v != null ? HC_TEAM_META[k].fmt(v) : '—'}</span>
+                    <span class="hc-m-sec-lbl">${HC_STAT_LABEL[k]}</span>
+                </div>`;
+            }).join('');
+
+            const allStatScroll = HC_FULL_STATS.map(k => {
+                const v = row[k] ?? null;
+                const sznV = sznRow?.[k] ?? null;
+                const tier = v != null ? hcTier(k, v) : '';
+                return `<div class="hc-m-scroll-stat">
+                    <span class="hc-m-scroll-lbl">${HC_STAT_LABEL[k]}</span>
+                    <span class="hc-m-scroll-val ${tier}">${v != null ? HC_TEAM_META[k].fmt(v) : '—'}</span>
+                    <span class="hc-m-scroll-szn">${sznV != null ? HC_TEAM_META[k].fmt(sznV) : ''}</span>
+                </div>`;
+            }).join('');
+
+            html += `<div class="hc-m-card" onclick="toggleHCCard(this)">
+                <span class="hc-m-rank">${i+1}</span>
+                ${logoImg(row.tm, 24)}
+                <div class="hc-m-name">
+                    <div class="hc-m-abbr" style="font-size:0.82rem;font-family:var(--body);font-weight:600;color:var(--text);">${row.name}</div>
+                    <div class="hc-m-sub" style="color:${teamColor(row.tm)};">${row.tm==='WAS'?'WSN':row.tm} · PA: ${row.pa}</div>
+                </div>
+                <div class="hc-m-stats">
+                    <span class="hc-m-primary ${primaryTier}">${primaryVal}</span>
+                    <div class="hc-m-secondary">${secHtml}</div>
+                </div>
+                <div class="hc-m-expand-row" style="display:none;">
+                    <div class="hc-m-stat-scroll">${allStatScroll}</div>
+                </div>
+            </div>`;
+        });
+        return html;
+    }
+
+    container.innerHTML = buildSection(hot, true) + buildSection(cold, false);
+}
+
+function toggleHCCard(card) {
+    const row = card.querySelector('.hc-m-expand-row');
+    if (!row) return;
+    const isOpen = row.style.display !== 'none';
+    row.style.display = isOpen ? 'none' : '';
+    card.classList.toggle('expanded', !isOpen);
+}
+
+// ── LINEUPS ──────────────────────────────────────────────────────────────────
+function parseGameTime(t) {
+    if (!t) return 9999;
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!m) return 9999;
+    let h = parseInt(m[1]), min = parseInt(m[2]), ampm = m[3].toUpperCase();
+    if (ampm==='PM' && h!==12) h += 12;
+    if (ampm==='AM' && h===12) h = 0;
+    return h*60+min;
+}
+
+function pairLineupGames(rows) {
+    const awayBySlot = {}, homeBySlot = {};
+    rows.forEach(r => {
+        const slot = (r.game_date||'') + '|' + (r.game_time||'TBD');
+        if (r.side === 'Away') { if (!awayBySlot[slot]) awayBySlot[slot]=[]; awayBySlot[slot].push(r); }
+        else { if (!homeBySlot[slot]) homeBySlot[slot]=[]; homeBySlot[slot].push(r); }
+    });
+    const pairs = [];
+    const allSlots = new Set([...Object.keys(awayBySlot),...Object.keys(homeBySlot)]);
+    allSlots.forEach(slot => {
+        const al = awayBySlot[slot]||[], hl = homeBySlot[slot]||[];
+        const count = Math.max(al.length, hl.length);
+        for (let i=0; i<count; i++) {
+            const [date,time] = slot.split('|');
+            pairs.push({ away:al[i]||null, home:hl[i]||null, date, time });
+        }
+    });
+    return pairs.sort((a,b) => {
+        if (a.date!==b.date) return b.date>a.date?1:-1;
+        return parseGameTime(a.time)-parseGameTime(b.time);
+    });
+}
+
+function renderLineupsMobile() {
+    lineupLoaded = true;
+    const container = document.getElementById('m-lineup-container');
+    if (!lineupGames.length) {
+        container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">📭</div><div class="m-empty-text">No lineups for today</div></div>`;
+        return;
+    }
+    const pairs = pairLineupGames(lineupGames);
+    container.innerHTML = pairs.map(({ away, home }) => {
+        const awayAbbr = away?.team || '???';
+        const homeAbbr = home?.team || '???';
+        const gameTime = away?.game_time || home?.game_time || '';
+        const statusBadge = s => s === 'Confirmed'
+            ? `<span class="m-status-confirmed">✓ Confirmed</span>`
+            : `<span class="m-status-projected">~ Projected</span>`;
+        return `<div class="m-game-card">
+            <div class="m-game-header">
+                <div class="m-game-matchup">
+                    <div class="m-game-team">${logoImg(awayAbbr,28)}<span class="m-game-abbr" style="color:${teamColor(awayAbbr)};">${awayAbbr}</span></div>
+                    <span class="m-game-vs">@</span>
+                    <div class="m-game-team">${logoImg(homeAbbr,28)}<span class="m-game-abbr" style="color:${teamColor(homeAbbr)};">${homeAbbr}</span></div>
+                </div>
+                <span class="m-game-time">${gameTime}</span>
+            </div>
+            <div class="m-lineup-body">
+                ${buildMobileLineupSide(away, awayAbbr, 'Away', statusBadge(away?.lineup_status||''))}
+                ${buildMobileLineupSide(home, homeAbbr, 'Home', statusBadge(home?.lineup_status||''))}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function buildMobileLineupSide(rec, abbr, label, statusBadge) {
+    let battersHtml = '';
+    if (rec?.batting_order) {
+        let order = [];
+        try { order = JSON.parse(rec.batting_order); } catch(e) {}
+        battersHtml = order.map(p =>
+            `<div class="m-batter-row">
+                <span class="m-batter-num">${p.order}</span>
+                <span class="m-batter-name">${correctPlayerName(p.name)}</span>
+                <span class="m-batter-pos">${p.position||''}</span>
+                ${batBadge(p.bat_side)}
+            </div>`
+        ).join('');
+    } else {
+        battersHtml = `<div class="m-batter-row"><span class="m-batter-name" style="color:var(--muted);">Lineup not available</span></div>`;
+    }
+    return `<div class="m-lineup-side">
+        <div class="m-lineup-side-hdr">
+            <div class="m-lineup-side-team">${logoImg(abbr,20)}<span class="m-lineup-side-abbr" style="color:${teamColor(abbr)};">${abbr}</span></div>
+            <div style="display:flex;align-items:center;gap:4px;"><span class="m-lineup-lbl">${label}</span>${statusBadge}</div>
+        </div>
+        <div class="m-pitcher-row">
+            <span class="m-pitcher-lbl">SP</span>
+            <span class="m-pitcher-name">${rec?.pitcher_name||'TBD'}</span>
+            ${rec?.pitcher_hand ? `<span class="m-pitcher-hand">(${rec.pitcher_hand})</span>` : ''}
+        </div>
+        ${battersHtml}
+    </div>`;
+}
+
+// ── RPG ───────────────────────────────────────────────────────────────────────
+function renderRPG() {
+    const container = document.getElementById('rpg-container');
+    if (!rpgLoaded || !rpgData.length) {
+        container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">📭</div><div class="m-empty-text">No data</div></div>`;
+        return;
+    }
+    const sortKey = document.getElementById('rpg-sort-sel').value;
+    const search  = (document.getElementById('rpg-search').value || '').trim().toLowerCase();
+    let data = rpgData;
+    if (search) {
+        data = data.filter(r => {
+            const abbr = RPG_TEAM_ABBR[r.tm] || '';
+            return r.tm.toLowerCase().includes(search) || abbr.toLowerCase().includes(search);
+        });
+    }
+    data = [...data].sort((a,b) => (b[sortKey]??-999) - (a[sortKey]??-999));
+    const fmt = v => v != null ? v.toFixed(2) : '—';
+    container.innerHTML = data.map((row, i) => {
+        const abbr = RPG_TEAM_ABBR[row.tm] || '';
+        return `<div class="m-rpg-card">
+            <span class="m-rpg-rank">${i+1}</span>
+            ${logoImg(abbr, 28)}
+            <span class="m-rpg-name" style="color:${teamColor(abbr)};">${row.tm}</span>
+            <div class="m-rpg-stats">
+                <div class="m-rpg-stat">
+                    <span class="m-rpg-val ${rpgTier(row.szn_2026)}">${fmt(row.szn_2026)}</span>
+                    <span class="m-rpg-lbl">2026</span>
+                </div>
+                <div class="m-rpg-stat">
+                    <span class="m-rpg-val ${rpgTier(row.last_3)}">${fmt(row.last_3)}</span>
+                    <span class="m-rpg-lbl">L3</span>
+                </div>
+                <div class="m-rpg-stat">
+                    <span class="m-rpg-val ${rpgTier(row.last_1)}">${fmt(row.last_1)}</span>
+                    <span class="m-rpg-lbl">L1</span>
+                </div>
+                <div class="m-rpg-stat">
+                    <span class="m-rpg-val ${rpgTier(row.home)}">${fmt(row.home)}</span>
+                    <span class="m-rpg-lbl">Home</span>
+                </div>
+                <div class="m-rpg-stat">
+                    <span class="m-rpg-val ${rpgTier(row.away)}">${fmt(row.away)}</span>
+                    <span class="m-rpg-lbl">Away</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── DAILY REPORT ─────────────────────────────────────────────────────────────
+const REPORT_STATS = [
+    { key:'wrcPlus', label:'wRC+',  fmt:v=>Math.round(v),    higherBetter:true  },
+    { key:'ops',     label:'OPS',   fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'woba',    label:'wOBA',  fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'avg',     label:'AVG',   fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'obp',     label:'OBP',   fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'slg',     label:'SLG',   fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'iso',     label:'ISO',   fmt:v=>v.toFixed(3),     higherBetter:true  },
+    { key:'kPct',    label:'K%',    fmt:v=>v.toFixed(1)+'%', higherBetter:false },
+    { key:'bbPct',   label:'BB%',   fmt:v=>v.toFixed(1)+'%', higherBetter:true  },
+    { key:'babip',   label:'BABIP', fmt:v=>v.toFixed(3),     higherBetter:true  },
+];
+
+async function initMobileReport() {
+    const sel = document.getElementById('m-game-dropdown');
+    if (sel.options.length > 1) return;
+    const today = new Date().toLocaleDateString('en-CA');
+    try {
+        const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&hydrate=team`);
+        const json = await res.json();
+        const games = json.dates?.[0]?.games || [];
+        sel.innerHTML = `<option value="">Select game…</option>` + games.map(g => {
+            const away = g.teams?.away?.team?.name || '';
+            const home = g.teams?.home?.team?.name || '';
+            return `<option value="${today}|${away}|${home}">${away} @ ${home}</option>`;
+        }).join('');
+    } catch(e) {
+        sel.innerHTML = `<option value="">Error loading games</option>`;
+    }
+}
+
+function handleMobileGameSelect(val) { /* selection stored for load */ }
+
+async function loadMobileReport() {
+    const selVal = document.getElementById('m-game-dropdown').value;
+    const split  = document.getElementById('m-report-split').value;
+    if (!selVal) return;
+    const [dateVal, awayName, homeName] = selVal.split('|');
+    const awayAbbr = MLB_NAME_TO_ABBR[awayName] || awayName.substring(0,3).toUpperCase();
+    const homeAbbr = MLB_NAME_TO_ABBR[homeName] || homeName.substring(0,3).toUpperCase();
+    const container = document.getElementById('m-report-container');
+    container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">⏳</div><div class="m-empty-text">Loading…</div></div>`;
+
+    // Build rank maps
+    const dr = 'season';
+    const data = allData[`${split}-${dr}`] || [];
+    if (!data.length) {
+        container.innerHTML = `<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">No team data loaded yet</div></div>`;
+        return;
+    }
+    const rankMap = {};
+    REPORT_STATS.forEach(s => {
+        const sorted = [...data].sort((a,b) => s.higherBetter ? b[s.key]-a[s.key] : a[s.key]-b[s.key]);
+        rankMap[s.key] = {};
+        sorted.forEach((row, i) => { rankMap[s.key][row.tm] = i+1; });
+    });
+    const total = data.length || 30;
+    const awayRow = data.find(r => r.tm === awayAbbr);
+    const homeRow = data.find(r => r.tm === homeAbbr);
+
+    function statRows() {
+        return REPORT_STATS.map(s => {
+            const av = awayRow?.[s.key] ?? null;
+            const hv = homeRow?.[s.key] ?? null;
+            const ar = av != null ? rankMap[s.key][awayAbbr] : null;
+            const hr = hv != null ? rankMap[s.key][homeAbbr] : null;
+            const aTier = av != null ? tc(s.key, av) : '';
+            const hTier = hv != null ? tc(s.key, hv) : '';
+            const aWins = av != null && hv != null && (s.higherBetter ? av > hv : av < hv);
+            const hWins = av != null && hv != null && (s.higherBetter ? hv > av : hv < av);
+            // bar widths
+            const barMax = data.reduce((m,r) => Math.max(m, r[s.key]??0), 0) || 1;
+            const aPct = av != null ? Math.round((av/barMax)*100) : 0;
+            const hPct = hv != null ? Math.round((hv/barMax)*100) : 0;
+            const aColor = aTier.replace('t-','') === 'elite' ? 'var(--elite)' : aTier.replace('t-','') === 'good' ? 'var(--good)' : aTier.replace('t-','') === 'mid' ? 'var(--mid)' : aTier.replace('t-','') === 'bad' ? 'var(--bad)' : 'var(--ass)';
+            const hColor = hTier.replace('t-','') === 'elite' ? 'var(--elite)' : hTier.replace('t-','') === 'good' ? 'var(--good)' : hTier.replace('t-','') === 'mid' ? 'var(--mid)' : hTier.replace('t-','') === 'bad' ? 'var(--bad)' : 'var(--ass)';
+
+            return `<div class="m-report-row">
+                <span class="m-report-stat-name">${s.label}</span>
+                <div class="m-report-team-block">
+                    <div class="m-report-team-line">
+                        <span class="m-report-team-nm" style="color:${teamColor(awayAbbr)};">${awayAbbr}</span>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            ${ar ? `<span class="m-report-rank">#${ar}/${total}</span>` : ''}
+                            <span class="m-report-val ${aTier}" style="${aWins?'font-weight:800;':hWins?'opacity:0.45;':''}">${av != null ? s.fmt(av) : '—'}</span>
+                        </div>
+                    </div>
+                    ${av != null ? `<div class="m-bar-track"><div class="m-bar-fill" style="width:${aPct}%;background:${aColor};"></div></div>` : ''}
+                    <div class="m-report-team-line" style="margin-top:4px;">
+                        <span class="m-report-team-nm" style="color:${teamColor(homeAbbr)};">${homeAbbr}</span>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            ${hr ? `<span class="m-report-rank">#${hr}/${total}</span>` : ''}
+                            <span class="m-report-val ${hTier}" style="${hWins?'font-weight:800;':aWins?'opacity:0.45;':''}">${hv != null ? s.fmt(hv) : '—'}</span>
+                        </div>
+                    </div>
+                    ${hv != null ? `<div class="m-bar-track"><div class="m-bar-fill" style="width:${hPct}%;background:${hColor};"></div></div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    container.innerHTML = `<div class="m-report-card">
+        <div class="m-report-header">
+            <div class="m-report-team">${logoImg(awayAbbr,28)}<span class="m-report-abbr" style="color:${teamColor(awayAbbr)};">${awayAbbr}</span></div>
+            <span class="m-report-vs">@</span>
+            <div class="m-report-team">${logoImg(homeAbbr,28)}<span class="m-report-abbr" style="color:${teamColor(homeAbbr)};">${homeAbbr}</span></div>
+            <span style="font-family:var(--display);font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-left:auto;">${split === 'no_split' ? 'Overall' : split.replace('_',' ').toUpperCase()}</span>
+        </div>
+        <div class="m-report-body">${statRows()}</div>
+    </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    fetchData();
+    ensureLineups().then(() => {}).catch(()=>{});
+    ensureRPG().catch(()=>{});
+});
+</script>
+</body>
+</html>
